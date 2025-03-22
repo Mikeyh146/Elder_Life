@@ -1,23 +1,16 @@
-workflows:
-  ios_build:
-    name: iOS Build
-    environment:
-      flutter: stable
-    scripts:
-      - name: Clean & Get packages
-        script: |
-          cd elder_life
-          flutter clean
-          flutter pub get
+   - name: Build & package IPA
+     script: |
+       cd elder_life
+       flutter clean
+       flutter pub get
+       flutter build ipa --release --no-codesign
 
-      - name: Build & package IPA
-        script: |
-          cd elder_life
-          flutter build ipa --release --no-codesign
-          cd build/ios/ipa
-          mkdir -p Payload
-          unzip -q Runner.app.zip -d Payload
-          zip -q -r Runner.ipa Payload
+       # Create Payload folder and copy the .app into it
+       mkdir -p build/ios/ipa/Payload
+       cp -R build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app build/ios/ipa/Payload/
 
-    artifacts:
-      - elder_life/build/ios/ipa/Runner.ipa
+       # Zip into an unsigned IPA
+       cd build/ios/ipa
+       zip -q -r Runner.ipa Payload
+       ls -la
+
