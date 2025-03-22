@@ -4,16 +4,20 @@ workflows:
     environment:
       flutter: stable
     scripts:
-      - name: Get dependencies
+      - name: Clean & Get packages
         script: |
           cd elder_life
+          flutter clean
           flutter pub get
-      - name: Build unsigned IPA
+
+      - name: Build & package IPA
         script: |
           cd elder_life
           flutter build ipa --release --no-codesign
+          cd build/ios/ipa
+          mkdir -p Payload
+          unzip -q Runner.app.zip -d Payload
+          zip -q -r Runner.ipa Payload
+
     artifacts:
-      - elder_life/build/ios/ipa/*.ipa
-
-
-
+      - elder_life/build/ios/ipa/Runner.ipa
