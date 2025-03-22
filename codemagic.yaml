@@ -1,0 +1,19 @@
+workflows:
+  ios_build:
+    name: iOS Build
+    environment:
+      flutter: stable
+    scripts:
+      - name: Get dependencies
+        script: |
+          cd elder_life
+          flutter pub get
+      - name: Build unsigned IPA
+        script: |
+          cd elder_life
+          flutter build ipa --release --no-codesign
+    artifacts:
+      - elder_life/build/ios/ipa/*.ipa
+
+
+
