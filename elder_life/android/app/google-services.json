@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "714129458266",
+    "project_id": "elder-life-45a2e",
+    "storage_bucket": "elder-life-45a2e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:714129458266:android:ae879f3ecf48a106c0c463",
+        "android_client_info": {
+          "package_name": "Elder.Life"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBe_Q6JdSWXixZ096nnyFUsipal23888xo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

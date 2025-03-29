@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+//import 'package:firebase_core/firebase_core.dart'; // Import Firebase Core
 import 'screens/home_screen.dart';
 import 'screens/manage_players_screen.dart';
 import 'screens/new_game_start_screen.dart';
@@ -8,11 +9,16 @@ import 'models/player.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase before running the app.
+  //await Firebase.initializeApp();
+
   // Force landscape orientation
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,
     DeviceOrientation.landscapeRight,
   ]);
+
   runApp(const ElderLifeApp());
 }
 

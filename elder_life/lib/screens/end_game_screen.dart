@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/player.dart';
 import '../services/local_storage.dart';
+import '../models/commander.dart';
+
 
 class EndGameScreen extends StatefulWidget {
   final List<Player> players;
@@ -14,6 +16,7 @@ class _EndGameScreenState extends State<EndGameScreen> {
   Player? winner;
   // Map of losing player's ID to the name of the defeater.
   final Map<String, String> defeatDetails = {};
+  String? winningCommander; // Stores the name of the commander used to win
 
   @override
   Widget build(BuildContext context) {
@@ -38,6 +41,11 @@ class _EndGameScreenState extends State<EndGameScreen> {
                   setState(() {
                     winner = player;
                   });
+                  // If the game is a commander game and the player has commanders,
+                  // ask which commander they won with.
+                  if (player.commanders.isNotEmpty) {
+                    winningCommander = await _askForWinningCommander(player);
+                  }
                   await _collectDefeatDetails();
                 },
                 child: Text(player.name, style: const TextStyle(fontSize: 18)),
@@ -46,6 +54,51 @@ class _EndGameScreenState extends State<EndGameScreen> {
       ],
     );
   }
+
+  // New: Ask the winner which commander they won with.
+  Future<String?> _askForWinningCommander(Player winner) async {
+  Commander? selectedCommander; // Changed from Player? to Commander?
+  return showDialog<String>(
+    context: context,
+    barrierDismissible: false, // Force selection
+    builder: (context) {
+      return AlertDialog(
+        title: Text("Which commander did ${winner.name} win with?"),
+        content: StatefulBuilder(
+          builder: (context, setState) {
+            return DropdownButton<Commander>( // Using type Commander
+              isExpanded: true,
+              hint: const Text("Select a commander"),
+              value: selectedCommander,
+              onChanged: (Commander? value) {
+                setState(() {
+                  selectedCommander = value;
+                });
+              },
+              items: winner.commanders.map((commander) {
+                return DropdownMenuItem<Commander>(
+                  value: commander,
+                  child: Text(commander.name),
+                );
+              }).toList(),
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (selectedCommander != null) {
+                Navigator.pop(context, selectedCommander!.name);
+              }
+            },
+            child: const Text("OK"),
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   Future<void> _collectDefeatDetails() async {
     // For every player who is not the winner, ask who defeated them.
@@ -59,7 +112,7 @@ class _EndGameScreenState extends State<EndGameScreen> {
     }
     // Once defeat details are collected, update stats.
     _updatePlayerStats();
-    setState(() {}); // refresh UI to show summary
+    setState(() {}); // Refresh UI to show summary.
   }
 
   Future<String?> _showDefeatDialog(Player loser) async {
@@ -120,6 +173,9 @@ class _EndGameScreenState extends State<EndGameScreen> {
           const SizedBox(height: 20),
           Text("Winner: ${winner!.name}",
               style: const TextStyle(fontSize: 20)),
+          if (winningCommander != null)
+            Text("Won with: $winningCommander",
+                style: const TextStyle(fontSize: 18)),
           const SizedBox(height: 20),
           const Text("Defeat Details:",
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
@@ -145,29 +201,36 @@ class _EndGameScreenState extends State<EndGameScreen> {
     );
   }
 
- void _updatePlayerStats() async {
-  // Update games played and wins/losses
-  for (var player in widget.players) {
-    player.gamesPlayed++;
-    if (player.id == winner!.id) {
-      player.wins++;
-    } else {
-      player.losses++;
+  void _updatePlayerStats() async {
+    // Update games played and wins/losses.
+    for (var player in widget.players) {
+      player.gamesPlayed++;
+      if (player.id == winner!.id) {
+        player.wins++;
+        // Update winCommanders map if a winning commander was selected.
+        if (winningCommander != null) {
+          // Increase the win count for the selected commander.
+          winner!.winCommanders[winningCommander!] =
+              (winner!.winCommanders[winningCommander!] ?? 0) + 1;
+        }
+      } else {
+        player.losses++;
+      }
     }
-  }
 
-  // Update playersDefeated for each defeat detail.
-  for (var loserId in defeatDetails.keys) {
-    String defeaterName = defeatDetails[loserId]!;
-    try {
-      Player defeater = widget.players.firstWhere((p) => p.name == defeaterName);
-      defeater.playersDefeated++;
-    } catch (_) {
-      // If no matching defeater is found, ignore.
+    // Update playersDefeated for each defeat detail.
+    for (var loserId in defeatDetails.keys) {
+      String defeaterName = defeatDetails[loserId]!;
+      try {
+        Player defeater =
+            widget.players.firstWhere((p) => p.name == defeaterName);
+        defeater.playersDefeated++;
+      } catch (_) {
+        // If no matching defeater is found, ignore.
+      }
     }
-  }
 
-  // Persist updated stats for all players at once.
-  await LocalStorage.updateAllStats(widget.players);
-}
+    // Persist updated stats for all players.
+    await LocalStorage.updateAllStats(widget.players);
+  }
 }

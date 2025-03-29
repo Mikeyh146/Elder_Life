@@ -35,20 +35,27 @@ class LocalStorage {
 
   // Update a single player's record.
   static Future<void> updatePlayer(Player player) async {
-  final prefs = await SharedPreferences.getInstance();
-  List<Player> players = await getPlayers();
-  int index = players.indexWhere((p) => p.id == player.id);
-  if (index != -1) {
-    players[index] = player;
-    final updatedJson = players.map((p) => jsonEncode(p.toJson())).toList();
-    print("Saving updated players: $updatedJson"); // Debug print
-    await updateAllStats(players);
-  } else {
-    print("Player with id ${player.id} not found in storage.");
+    final prefs = await SharedPreferences.getInstance();
+    List<Player> players = await getPlayers();
+    int index = players.indexWhere((p) => p.id == player.id);
+    if (index != -1) {
+      players[index] = player;
+      final updatedJson =
+          players.map((p) => jsonEncode(p.toJson())).toList();
+      print("Saving updated players: $updatedJson"); // Debug print
+      await updateAllStats(players);
+    } else {
+      print("Player with id ${player.id} not found in storage.");
+    }
   }
-}
 
-  
-
-
+  // Delete a player's record.
+  static Future<void> deletePlayer(Player player) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<Player> players = await getPlayers();
+    players.removeWhere((p) => p.id == player.id);
+    final playersJson =
+        players.map((p) => jsonEncode(p.toJson())).toList();
+    await prefs.setStringList(_playersKey, playersJson);
+  }
 }

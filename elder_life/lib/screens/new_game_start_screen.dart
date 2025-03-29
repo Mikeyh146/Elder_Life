@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'select_players_screen.dart';
 import 'manage_players_screen.dart';
+import 'linked_game_screen.dart';
+import '../models/player.dart';
 
 class NewGameStartScreen extends StatelessWidget {
   const NewGameStartScreen({super.key});
 
-  // For Commander: ask for number of players then navigate.
-  Future<void> _selectCommanderGame(BuildContext context) async {
+  // For New Game: Ask for number of players then navigate.
+  Future<void> _selectNewGame(BuildContext context) async {
     final numPlayers = await showDialog<int>(
       context: context,
       builder: (context) => AlertDialog(
@@ -29,7 +31,7 @@ class NewGameStartScreen extends StatelessWidget {
         MaterialPageRoute(
           builder: (context) => SelectPlayersScreen(
             numberOfPlayers: numPlayers,
-            gameType: "commander",
+            gameType: "commander", // assuming New Game is a commander type
             startingLife: 40,
           ),
         ),
@@ -37,30 +39,21 @@ class NewGameStartScreen extends StatelessWidget {
     }
   }
 
-  // For Commander Brawl: fixed 2 players with 25 starting life.
-  void _selectCommanderBrawl(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SelectPlayersScreen(
-          numberOfPlayers: 2,
-          gameType: "commander-brawl",
-          startingLife: 25,
-        ),
-      ),
+  // For Tournament Game: Placeholder.
+  void _selectTournamentGame(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Tournament Game coming soon!")),
     );
   }
 
-  // For Standard: fixed 2 players with 20 starting life.
-  void _selectStandard(BuildContext context) {
+  // For Linked Game: Navigate to the LinkedGameScreen.
+  void _selectLinkedGame(BuildContext context) {
+    // Create a dummy host for now. Replace this with your real host player later.
+    Player dummyHost = Player(id: 'host1', name: 'Host Player');
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SelectPlayersScreen(
-          numberOfPlayers: 2,
-          gameType: "standard",
-          startingLife: 20,
-        ),
+        builder: (context) => LinkedGameScreen(host: dummyHost),
       ),
     );
   }
@@ -75,6 +68,7 @@ class NewGameStartScreen extends StatelessWidget {
     );
   }
 
+  // Build an option card widget.
   Widget _buildOptionCard({
     required BuildContext context,
     required String title,
@@ -88,16 +82,20 @@ class NewGameStartScreen extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 48, color: Theme.of(context).primaryColor),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 48, color: Theme.of(context).primaryColor),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -106,14 +104,14 @@ class NewGameStartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Use LayoutBuilder to determine the available space.
+    // Use LayoutBuilder to create a 2x2 grid that adapts to the available space.
     return Scaffold(
       appBar: AppBar(title: const Text("New Game")),
       body: LayoutBuilder(
         builder: (context, constraints) {
           // Define spacing between grid cells.
           const double spacing = 16.0;
-          // Calculate cell width and height for a 2x2 grid:
+          // Calculate cell width and height for a 2x2 grid.
           final cellWidth = (constraints.maxWidth - spacing * 3) / 2;
           final cellHeight = (constraints.maxHeight - spacing * 3) / 2;
           final aspectRatio = cellWidth / cellHeight;
@@ -129,21 +127,21 @@ class NewGameStartScreen extends StatelessWidget {
               children: [
                 _buildOptionCard(
                   context: context,
-                  title: "Commander",
-                  icon: Icons.star,
-                  onTap: () => _selectCommanderGame(context),
+                  title: "New Game",
+                  icon: Icons.play_arrow,
+                  onTap: () => _selectNewGame(context),
                 ),
                 _buildOptionCard(
                   context: context,
-                  title: "Commander Brawl",
-                  icon: Icons.sports_mma,
-                  onTap: () => _selectCommanderBrawl(context),
+                  title: "Tournament Game",
+                  icon: Icons.emoji_events,
+                  onTap: () => _selectTournamentGame(context),
                 ),
                 _buildOptionCard(
                   context: context,
-                  title: "Standard",
-                  icon: Icons.videogame_asset,
-                  onTap: () => _selectStandard(context),
+                  title: "Linked Game",
+                  icon: Icons.link,
+                  onTap: () => _selectLinkedGame(context),
                 ),
                 _buildOptionCard(
                   context: context,

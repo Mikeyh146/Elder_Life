@@ -1,4 +1,4 @@
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/player.dart';
 import '../models/commander.dart';
@@ -7,12 +7,14 @@ import '../widgets/player_card.dart';
 class GameScreen extends StatefulWidget {
   final List<Player> players;
   final int startingLife;
+  final bool isCommanderGame; // New flag
 
   const GameScreen({
-    super.key,
+    Key? key,
     required this.players,
     required this.startingLife,
-  });
+    required this.isCommanderGame,
+  }) : super(key: key);
 
   @override
   _GameScreenState createState() => _GameScreenState();
@@ -28,12 +30,9 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   void initState() {
     super.initState();
     activePlayers = List.from(widget.players);
-    lifeTotals = {for (var p in widget.players) p.id: widget.startingLife};
+    lifeTotals = { for (var p in widget.players) p.id: widget.startingLife };
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     _animation = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
   }
 
@@ -43,45 +42,63 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // Compute unique active commanders from all players.
+  List<Commander> _getActiveCommanders() {
     List<Commander> activeCommanders = [];
     for (var p in activePlayers) {
       activeCommanders.addAll(p.commanders);
     }
-    var uniqueCommanders = {for (var c in activeCommanders) c.id: c};
-    activeCommanders = uniqueCommanders.values.toList();
+    var uniqueCommanders = { for (var c in activeCommanders) c.id: c };
+    return uniqueCommanders.values.toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List<Commander> activeCommanders = _getActiveCommanders();
 
     return Scaffold(
-      // Remove the AppBar so there's no back arrow or title.
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final gridWidth = constraints.maxWidth;
             final gridHeight = constraints.maxHeight;
-            // For a 2x2 grid:
-            final cellWidth = gridWidth / 2;
-            final cellHeight = gridHeight / 2;
+
+            int playerCount = activePlayers.length;
+            int crossAxisCount;
+            if (playerCount == 2) {
+              crossAxisCount = 2;
+            } else if (playerCount == 4) {
+              crossAxisCount = 2;
+            } else if (playerCount == 5 || playerCount == 6) {
+              crossAxisCount = 3;
+            } else {
+              crossAxisCount = math.min(playerCount, 3);
+            }
+
+            int rowCount = (playerCount / crossAxisCount).ceil();
+            const double spacing = 16.0;
+            final cellWidth = (gridWidth - (crossAxisCount + 1) * spacing) / crossAxisCount;
+            final cellHeight = (gridHeight - (rowCount + 1) * spacing) / rowCount;
             final childAspectRatio = cellWidth / cellHeight;
 
             return Stack(
               children: [
-                // Grid container that fills available space.
                 Container(
                   width: gridWidth,
                   height: gridHeight,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(spacing),
                   child: GridView.count(
                     physics: const NeverScrollableScrollPhysics(),
                     shrinkWrap: true,
-                    crossAxisCount: activePlayers.length <= 2 ? 1 : 2,
+                    crossAxisCount: crossAxisCount,
                     childAspectRatio: childAspectRatio,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    children: activePlayers.map((player) {
+                    mainAxisSpacing: spacing,
+                    crossAxisSpacing: spacing,
+                    children: activePlayers.asMap().entries.map((entry) {
+                      int index = entry.key;
+                      Player player = entry.value;
                       final int life = lifeTotals[player.id] ?? widget.startingLife;
-                      return PlayerCard(
+                      // Create the PlayerCard widget.
+                      Widget card = PlayerCard(
                         player: player,
                         lifeTotal: life,
                         onLifeChange: (delta) {
@@ -89,15 +106,21 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                             if (life <= 0 && delta > 0) {
                               lifeTotals[player.id] = delta;
                             } else {
-                              lifeTotals[player.id] =
-                                  (lifeTotals[player.id] ?? widget.startingLife) + delta;
+                              lifeTotals[player.id] = (lifeTotals[player.id] ?? widget.startingLife) + delta;
                             }
                           });
                           if ((lifeTotals[player.id] ?? widget.startingLife) <= 0) {
                             _onDefeatDialog(player, "Life reached 0");
                           }
                         },
-                        onKO: () => _onDefeatDialog(player, "KO Button"),
+                        onKO: () {
+                          setState(() {
+                            lifeTotals[player.id] = 0;
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("${player.name} is knocked out.")),
+                          );
+                        },
                         onRejoin: () {
                           setState(() {
                             lifeTotals[player.id] = widget.startingLife;
@@ -161,13 +184,21 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                         },
                         activeCommanders: activeCommanders,
                       );
+                      // Flip the card if it's in the top row.
+                      if (index < crossAxisCount) {
+                        card = Transform.rotate(
+                          angle: math.pi,
+                          child: card,
+                        );
+                      }
+                      // Return the card as is (no onTap navigation).
+                      return card;
                     }).toList(),
                   ),
                 ),
-                // Center the cog icon at the intersection of the 4 grid cells.
                 Positioned(
-                  left: gridWidth / 2 - 27, // adjust as needed
-                  top: gridHeight / 2 - 15,  // adjust as needed
+                  left: gridWidth / 2 - 27,
+                  top: gridHeight / 2 - 27,
                   child: IconButton(
                     icon: const Icon(Icons.settings, size: 40, color: Colors.deepOrange),
                     onPressed: _openInGameSettings,
@@ -184,25 +215,17 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   Future<void> _onDefeatDialog(Player defeatedPlayer, String reason) async {
     bool? confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("${defeatedPlayer.name} is defeated?"),
-          content: Text("Reason: $reason. Confirm defeat?"),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text("No"),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text("Yes"),
-            ),
-          ],
-        );
-      },
+      builder: (context) => AlertDialog(
+        title: Text("${defeatedPlayer.name} is defeated?"),
+        content: Text("Reason: $reason. Confirm defeat?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("No")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes")),
+        ],
+      ),
     );
     if (confirmed == true) {
-      // Handle defeat logic here.
+      // Handle defeat logic if needed.
     }
   }
 
@@ -220,8 +243,8 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                   icon: const Icon(Icons.stop),
                   label: const Text("End Game"),
                   onPressed: () {
-                    Navigator.pop(context); // Close settings
-                    _confirmEndGame(); // Ask if game is over, then proceed.
+                    Navigator.pop(context);
+                    _confirmEndGame();
                   },
                 ),
                 const SizedBox(height: 12),
@@ -269,7 +292,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   void _flipCoin() {
-    String result = Random().nextBool() ? "Heads" : "Tails";
+    String result = math.Random().nextBool() ? "Heads" : "Tails";
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -283,7 +306,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   void _rollDice() {
-    int result = Random().nextInt(6) + 1;
+    int result = math.Random().nextInt(6) + 1;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -335,19 +358,15 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
                 }).toList(),
               ),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, selected),
-                  child: const Text("OK"),
-                ),
+                TextButton(onPressed: () => Navigator.pop(context, selected), child: const Text("OK")),
               ],
             );
           },
         );
       },
     );
-    if (currentPlayer == null) return;
-    List<Player> opponents = activePlayers.where((p) => p.id != currentPlayer.id).toList();
-    Player randomOpponent = opponents[Random().nextInt(opponents.length)];
+    List<Player> opponents = activePlayers.where((p) => p.id != currentPlayer!.id).toList();
+    Player randomOpponent = opponents[math.Random().nextInt(opponents.length)];
     _controller.forward(from: 0.0);
     showDialog(
       context: context,
@@ -372,7 +391,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
 
   void _randomPlayer() {
     if (activePlayers.isEmpty) return;
-    Player randomPlayer = activePlayers[Random().nextInt(activePlayers.length)];
+    Player randomPlayer = activePlayers[math.Random().nextInt(activePlayers.length)];
     _controller.forward(from: 0.0);
     showDialog(
       context: context,
@@ -396,28 +415,21 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
   }
 
   void _confirmEndGame() async {
-  bool? isOver = await showDialog<bool>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text("End Game"),
-      content: const Text("Is the game over?"),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text("No"),
-        ),
-        TextButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text("Yes"),
-        ),
-      ],
-    ),
-  );
-  if (isOver == true) {
-    Navigator.pushReplacementNamed(context, '/end-game', arguments: activePlayers);
+    bool? isOver = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("End Game"),
+        content: const Text("Is the game over?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("No")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Yes")),
+        ],
+      ),
+    );
+    if (isOver == true) {
+      Navigator.pushReplacementNamed(context, '/end-game', arguments: activePlayers);
+    }
   }
-}
-
 
   void _abandonGame() async {
     bool? confirmed = await showDialog<bool>(
@@ -426,19 +438,12 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         title: const Text("Abandon Game"),
         content: const Text("Are you sure you want to abandon the game? Stats will not be tracked."),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text("Abandon"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Abandon")),
         ],
       ),
     );
     if (confirmed == true) {
-      // Simply navigate back to HomeScreen.
       Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
     }
   }

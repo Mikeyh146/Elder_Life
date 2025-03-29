@@ -26,7 +26,7 @@ class PlayerCard extends StatefulWidget {
   final List<Commander> activeCommanders;
 
   const PlayerCard({
-    super.key,
+    Key? key,
     required this.player,
     required this.lifeTotal,
     required this.onLifeChange,
@@ -42,7 +42,7 @@ class PlayerCard extends StatefulWidget {
     required this.onAscendToggle,
     required this.onFlip,
     required this.activeCommanders,
-  });
+  }) : super(key: key);
 
   @override
   _PlayerCardState createState() => _PlayerCardState();
@@ -60,7 +60,6 @@ class _PlayerCardState extends State<PlayerCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Fade out if player is KO.
     final bool koStatus = widget.lifeTotal <= 0;
 
     return AnimatedOpacity(
@@ -69,28 +68,29 @@ class _PlayerCardState extends State<PlayerCard> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 350),
         child: AspectRatio(
-          aspectRatio: 1, // Keep card square.
+          aspectRatio: 350 / 320, // similar to your HTML dimensions
           child: Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            color: Colors.grey[900],
-            child: Stack(
+            color: const Color(0xFF1E1E1E), // matches HTML card-face bg
+            child: Column(
               children: [
-                // Content container: both front and back fill the available space.
-                Container(
-                  padding: const EdgeInsets.only(bottom: 48.0), // space for the flip button
+                // Expanded area for front/back content.
+                Expanded(
                   child: isFront ? _buildFront() : _buildBack(),
                 ),
-                // Flip button at bottom center.
-                Positioned(
-                  bottom: 8,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: IconButton(
-                      icon: const Icon(Icons.flip, color: Colors.white, size: 30),
-                      onPressed: _flipCard,
+                // Flip button row.
+                Container(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: GestureDetector(
+                    onTap: _flipCard,
+                    child: Text(
+                      "↻ Flip",
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white.withOpacity(0.6),
+                      ),
                     ),
                   ),
                 ),
@@ -102,176 +102,223 @@ class _PlayerCardState extends State<PlayerCard> {
     );
   }
 
-  /// Build the front side: life total, status icons, plus/minus buttons.
+  /// Builds the front of the card.
   Widget _buildFront() {
-    final bool koStatus = widget.lifeTotal <= 0;
-
-    return Container(
-      // Fill the available space.
-      width: double.infinity,
-      height: double.infinity,
-      padding: const EdgeInsets.all(8),
-      child: Column(
-        children: [
-          // Status icons row at the top.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (widget.player.isMonarch)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Icon(Icons.emoji_events, size: 30, color: Colors.yellow),
-                ),
-              if (widget.player.hasInitiative)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Icon(Icons.flash_on, size: 30, color: Colors.lightBlue),
-                ),
-              if (widget.player.isAscended)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                  child: Icon(Icons.upgrade, size: 30, color: Colors.purple),
-                ),
-            ],
-          ),
-          // Spacer to push life total to center.
-          const Spacer(),
-          // Life total row.
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Minus button.
-              GestureDetector(
-                onTap: () => widget.onLifeChange(-1),
-                onLongPress: () => widget.onLifeChange(-10),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.red,
+  final bool koStatus = widget.lifeTotal <= 0;
+  // Use the first commander's image if available.
+  String? commanderImage = widget.player.commanders.isNotEmpty
+      ? widget.player.commanders.first.imageUrl
+      : null;
+  
+  return Stack(
+    fit: StackFit.expand,
+    children: [
+      // Background: commander art if available.
+      if (commanderImage != null)
+        Image.network(
+          commanderImage,
+          fit: BoxFit.cover,
+        ),
+      // Dark overlay for readability.
+      Container(color: Colors.black.withOpacity(0.5)),
+      // Main content.
+      Container(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            // Status icons row.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (widget.player.isMonarch)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Icon(Icons.emoji_events, size: 30, color: Colors.yellow),
                   ),
-                  child: const Icon(Icons.remove, color: Colors.white, size: 30),
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Life total display.
-              Text(
-                "${widget.lifeTotal}",
-                style: const TextStyle(fontSize: 50, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              const SizedBox(width: 16),
-              // Plus button.
-              GestureDetector(
-                onTap: () => widget.onLifeChange(1),
-                onLongPress: () => widget.onLifeChange(10),
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.green,
+                if (widget.player.hasInitiative)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Icon(Icons.flash_on, size: 30, color: Colors.lightBlue),
                   ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 30),
-                ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          // If player is KO, optionally display "Rejoin" button.
-          if (koStatus)
-            ElevatedButton(
-              onPressed: widget.onRejoin,
-              child: const Text("Rejoin"),
+                if (widget.player.isAscended)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 4.0),
+                    child: Icon(Icons.upgrade, size: 30, color: Colors.purple),
+                  ),
+              ],
             ),
-        ],
+            const SizedBox(height: 8),
+            // Player name (styled like an input).
+            TextField(
+              controller: TextEditingController(text: widget.player.name),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, color: Colors.white),
+              decoration: InputDecoration(
+                border: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade600),
+                ),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.grey.shade600),
+                ),
+                focusedBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white),
+                ),
+              ),
+            ),
+            const Spacer(),
+            // Life total row centered.
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildLifeButton(
+                  icon: Icons.remove,
+                  btnColor: const Color(0xFF333333),
+                  onTap: () => widget.onLifeChange(-1),
+                  onLongPress: () => widget.onLifeChange(-10),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  "${widget.lifeTotal}",
+                  style: const TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                _buildLifeButton(
+                  icon: Icons.add,
+                  btnColor: const Color(0xFF333333),
+                  onTap: () => widget.onLifeChange(1),
+                  onLongPress: () => widget.onLifeChange(10),
+                ),
+              ],
+            ),
+            const Spacer(),
+            if (koStatus)
+              ElevatedButton(
+                onPressed: widget.onRejoin,
+                child: const Text("Rejoin"),
+              ),
+          ],
+        ),
       ),
-    );
-  }
-
- Widget _buildBack() {
-  // Build your grid cells.
-  List<Widget> cells = [
-    _buildToggleSquare(
-      label: "Monarch",
-      isActive: widget.player.isMonarch,
-      onTap: () => widget.onMonarchToggle(!widget.player.isMonarch),
-    ),
-    _buildToggleSquare(
-      label: "Initiative",
-      isActive: widget.player.hasInitiative,
-      onTap: () => widget.onInitiativeToggle(!widget.player.hasInitiative),
-    ),
-    _buildToggleSquare(
-      label: "Ascend",
-      isActive: widget.player.isAscended,
-      onTap: () => widget.onAscendToggle(!widget.player.isAscended),
-    ),
-    _buildToggleSquare(
-      label: "Day/Night",
-      isActive: widget.player.dayNight != "off",
-      info: widget.player.dayNight,
-      onTap: () {
-        if (widget.player.dayNight == "off") {
-          widget.onDayNightCycle("day");
-        } else if (widget.player.dayNight == "day") {
-          widget.onDayNightCycle("night");
-        } else {
-          widget.onDayNightCycle("off");
-        }
-      },
-    ),
-    _buildCounterSquare(
-      label: "Energy",
-      value: widget.player.energy,
-      onChange: widget.onEnergyChange,
-    ),
-    _buildCounterSquare(
-      label: "EXP",
-      value: widget.player.exp,
-      onChange: widget.onExpChange,
-    ),
-    _buildCounterSquare(
-      label: "Poison",
-      value: widget.player.poison,
-      onChange: widget.onPoisonChange,
-    ),
-    _buildCounterSquare(
-      label: "Rad",
-      value: widget.player.rad,
-      onChange: widget.onRadChange,
-    ),
-    _buildActionSquare(
-      label: "K.O.",
-      onTap: widget.onKO,
-    ),
-    _buildCommanderDamageSquare(),
-  ];
-
-  // Ensure we have exactly 12 cells.
-  while (cells.length < 12) {
-    cells.add(Container());
-  }
-
-  // Wrap the GridView in a Container with a fixed height.
-  return Padding(
-    padding: const EdgeInsets.all(8.0),
-    child: Container(
-      height: 210, // Adjust this fixed height as needed
-      child: GridView.count(
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        crossAxisCount: 4, // 4 columns x 3 rows = 12 cells
-        childAspectRatio: 1,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        children: cells,
-      ),
-    ),
+    ],
   );
 }
 
 
+  /// Builds a life change button with a similar style to HTML.
+  Widget _buildLifeButton({
+    required IconData icon,
+    required Color btnColor,
+    required VoidCallback onTap,
+    required VoidCallback onLongPress,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        decoration: BoxDecoration(
+          color: btnColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.white, size: 30),
+      ),
+    );
+  }
 
-  /// Build a toggle square widget.
+  /// Builds the back of the card.
+  Widget _buildBack() {
+    // Build grid cells for toggles, counters, and actions.
+    List<Widget> cells = [
+      _buildToggleSquare(
+        label: "Monarch",
+        isActive: widget.player.isMonarch,
+        onTap: () => widget.onMonarchToggle(!widget.player.isMonarch),
+      ),
+      _buildToggleSquare(
+        label: "Initiative",
+        isActive: widget.player.hasInitiative,
+        onTap: () => widget.onInitiativeToggle(!widget.player.hasInitiative),
+      ),
+      _buildToggleSquare(
+        label: "Ascend",
+        isActive: widget.player.isAscended,
+        onTap: () => widget.onAscendToggle(!widget.player.isAscended),
+      ),
+      _buildToggleSquare(
+        label: "Day/Night",
+        isActive: widget.player.dayNight != "off",
+        info: widget.player.dayNight,
+        onTap: () {
+          if (widget.player.dayNight == "off") {
+            widget.onDayNightCycle("day");
+          } else if (widget.player.dayNight == "day") {
+            widget.onDayNightCycle("night");
+          } else {
+            widget.onDayNightCycle("off");
+          }
+        },
+      ),
+      _buildCounterSquare(
+        label: "Energy",
+        value: widget.player.energy,
+        onChange: widget.onEnergyChange,
+      ),
+      _buildCounterSquare(
+        label: "EXP",
+        value: widget.player.exp,
+        onChange: widget.onExpChange,
+      ),
+      _buildCounterSquare(
+        label: "Poison",
+        value: widget.player.poison,
+        onChange: widget.onPoisonChange,
+      ),
+      _buildCounterSquare(
+        label: "Rad",
+        value: widget.player.rad,
+        onChange: widget.onRadChange,
+      ),
+      _buildActionSquare(
+        label: "K.O.",
+        onTap: widget.onKO,
+      ),
+      _buildCommanderDamageSquare(),
+    ];
+
+    // Fill remaining cells to reach a 6x3 grid.
+    while (cells.length < 18) {
+      cells.add(Container());
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const double spacing = 8.0;
+        final double availableWidth = constraints.maxWidth;
+        final double availableHeight = constraints.maxHeight;
+        final double cellWidth = (availableWidth - (6 - 1) * spacing) / 6;
+        final double cellHeight = (availableHeight - (3 - 1) * spacing) / 3;
+        final double ratio = cellWidth / cellHeight;
+
+        return Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: GridView.count(
+            physics: const NeverScrollableScrollPhysics(),
+            shrinkWrap: true,
+            crossAxisCount: 6,
+            childAspectRatio: ratio,
+            mainAxisSpacing: spacing,
+            crossAxisSpacing: spacing,
+            children: cells,
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildToggleSquare({
     required String label,
     required bool isActive,
@@ -291,10 +338,17 @@ class _PlayerCardState extends State<PlayerCard> {
             children: [
               Text(
                 info ?? (isActive ? "On" : "Off"),
-                style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 4),
-              Text(label, style: const TextStyle(fontSize: 12, color: Colors.white)),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: Colors.white),
+              ),
             ],
           ),
         ),
@@ -302,7 +356,6 @@ class _PlayerCardState extends State<PlayerCard> {
     );
   }
 
-  /// Build a counter square with plus and minus buttons.
   Widget _buildCounterSquare({
     required String label,
     required int value,
@@ -317,7 +370,14 @@ class _PlayerCardState extends State<PlayerCard> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 4),
           Text("$value", style: const TextStyle(fontSize: 16, color: Colors.white)),
           const SizedBox(height: 4),
@@ -345,7 +405,6 @@ class _PlayerCardState extends State<PlayerCard> {
     );
   }
 
-  /// Build an action square.
   Widget _buildActionSquare({
     required String label,
     required VoidCallback onTap,
@@ -358,13 +417,15 @@ class _PlayerCardState extends State<PlayerCard> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
-          child: Text(label, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
+          ),
         ),
       ),
     );
   }
 
-  /// New widget for Commander Damage square.
   Widget _buildCommanderDamageSquare() {
     return GestureDetector(
       onTap: _onCommanderDamagePressed,
@@ -387,8 +448,6 @@ class _PlayerCardState extends State<PlayerCard> {
     );
   }
 
-  /// Opens a dialog to adjust Commander Damage.
-  /// The dialog now lists available commanders from the activeCommanders list.
   void _onCommanderDamagePressed() {
     List<Commander> availableCommanders = widget.activeCommanders.isNotEmpty
         ? widget.activeCommanders
@@ -406,8 +465,7 @@ class _PlayerCardState extends State<PlayerCard> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // List available commanders for selection.
-                  Container(
+                  SizedBox(
                     height: 150,
                     child: availableCommanders.isEmpty
                         ? const Text("No available commanders")
@@ -422,7 +480,7 @@ class _PlayerCardState extends State<PlayerCard> {
                                   height: 70,
                                   fit: BoxFit.cover,
                                   errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.image, size: 50);
+                                    return const Icon(Icons.image, size: 50, color: Colors.white);
                                   },
                                 ),
                                 title: Text(cmdr.name),
@@ -475,13 +533,11 @@ class _PlayerCardState extends State<PlayerCard> {
                       return;
                     }
                     int delta = localCommandDamage - widget.player.commanderDamage;
-                    // Optionally subtract this delta from the life total.
                     widget.onLifeChange(-delta);
                     setState(() {
                       widget.player.commanderDamage = localCommandDamage;
                     });
                     Navigator.pop(context);
-                    // Trigger defeat if commander damage reaches 21.
                     if (widget.player.commanderDamage >= 21) {
                       widget.onKO();
                     }

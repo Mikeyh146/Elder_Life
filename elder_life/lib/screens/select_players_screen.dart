@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/player.dart';
 import '../models/commander.dart';
 import '../services/local_storage.dart';
-import 'game_screen.dart';
+import 'seating_arrangement_screen.dart'; // Navigates to seating arrangement
 
 class SelectPlayersScreen extends StatefulWidget {
   final int numberOfPlayers;
@@ -10,11 +10,11 @@ class SelectPlayersScreen extends StatefulWidget {
   final int startingLife;
 
   const SelectPlayersScreen({
-    super.key,
+    Key? key,
     required this.numberOfPlayers,
     required this.gameType,
     required this.startingLife,
-  });
+  }) : super(key: key);
 
   @override
   _SelectPlayersScreenState createState() => _SelectPlayersScreenState();
@@ -23,7 +23,7 @@ class SelectPlayersScreen extends StatefulWidget {
 class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
   List<Player> _allPlayers = [];
   final List<Player> _selectedPlayers = [];
-  // For display purposes only (stores the chosen commander's name for each player).
+  // For display purposes (stores the chosen commander's name for each player)
   final Map<String, String> _selectedCommanders = {};
 
   @override
@@ -39,7 +39,7 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
     });
   }
 
-  /// Simple toggle: add or remove a player from _selectedPlayers.
+  /// Toggle selection of a player.
   void _toggleSelection(Player player) {
     setState(() {
       if (_selectedPlayers.contains(player)) {
@@ -109,9 +109,8 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
     );
   }
 
-  /// Prompt the user to select a saved commander for a player.
+  /// Prompt for a saved commander for a player.
   Future<Commander?> _selectSavedCommanderForPlayer(Player player) async {
-    // If the player doesn't have any saved commanders, inform the user.
     if (player.commanders.isEmpty) {
       return showDialog<Commander>(
         context: context,
@@ -129,7 +128,6 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
         },
       );
     }
-    // Otherwise, show a dialog listing the saved commanders.
     return showDialog<Commander>(
       context: context,
       builder: (context) {
@@ -169,11 +167,7 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
     );
   }
 
-  /// Proceed with the flow:
-  /// 1. Ask if it's a commander game.
-  /// 2. If yes, for each selected player, prompt for a saved commander.
-  /// 3. Then prompt for starting life total.
-  /// 4. Finally, navigate to GameScreen.
+  /// Proceed: ask commander game, prompt for commander selection if true, then prompt for life, and navigate.
   void _proceed() async {
     if (_selectedPlayers.length != widget.numberOfPlayers) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -183,8 +177,9 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
     }
 
     bool? isCommanderGame = await _askIfCommanderGame();
-    if (isCommanderGame == true) {
-      // For each selected player, prompt to select a saved commander.
+    bool commanderGame = isCommanderGame == true;
+
+    if (commanderGame) {
       for (var player in _selectedPlayers) {
         Commander? selected = await _selectSavedCommanderForPlayer(player);
         if (selected == null) {
@@ -193,7 +188,6 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
           );
           return;
         } else {
-          // Set the active commander for the game by replacing any previously selected commanders.
           player.commanders.clear();
           player.commanders.add(selected);
           _selectedCommanders[player.id] = selected.name;
@@ -205,9 +199,10 @@ class _SelectPlayersScreenState extends State<SelectPlayersScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => GameScreen(
+          builder: (context) => SeatingArrangementScreen(
             players: _selectedPlayers,
             startingLife: startingLife,
+            isCommanderGame: commanderGame, // Pass flag along
           ),
         ),
       );

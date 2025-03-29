@@ -2,7 +2,7 @@ import 'commander.dart';
 
 class Player {
   final String id;
-  final String name;
+  String name;
 
   // Basic stats
   int wins;
@@ -26,6 +26,9 @@ class Player {
   // New field for tracking total commander damage
   int commanderDamage;
 
+  // NEW: Tracking wins with each commander. The key is the commander's name, value is the win count.
+  Map<String, int> winCommanders;
+
   Player({
     required this.id,
     required this.name,
@@ -43,7 +46,9 @@ class Player {
     this.rad = 0,
     List<Commander>? commanders,
     this.commanderDamage = 0,
-  }) : commanders = commanders ?? [];
+    Map<String, int>? winCommanders,
+  })  : commanders = commanders ?? [],
+        winCommanders = winCommanders ?? {};
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -62,30 +67,32 @@ class Player {
         'rad': rad,
         'commanders': commanders.map((c) => c.toJson()).toList(),
         'commanderDamage': commanderDamage,
+        'winCommanders': winCommanders,
       };
 
   factory Player.fromJson(Map<String, dynamic> json) {
     return Player(
-      id: json['id'],
-      name: json['name'],
-      wins: json['wins'] ?? 0,
-      losses: json['losses'] ?? 0,
-      gamesPlayed: json['gamesPlayed'] ?? 0,
-      playersDefeated: json['playersDefeated'] ?? 0,
-      isMonarch: json['isMonarch'] ?? false,
-      hasInitiative: json['hasInitiative'] ?? false,
-      isAscended: json['isAscended'] ?? false,
-      dayNight: json['dayNight'] ?? "off",
-      energy: json['energy'] ?? 0,
-      exp: json['exp'] ?? 0,
-      poison: json['poison'] ?? 0,
-      rad: json['rad'] ?? 0,
+      id: json['id'] as String,
+      name: json['name'] as String,
+      wins: json['wins'] as int? ?? 0,
+      losses: json['losses'] as int? ?? 0,
+      gamesPlayed: json['gamesPlayed'] as int? ?? 0,
+      playersDefeated: json['playersDefeated'] as int? ?? 0,
+      isMonarch: json['isMonarch'] as bool? ?? false,
+      hasInitiative: json['hasInitiative'] as bool? ?? false,
+      isAscended: json['isAscended'] as bool? ?? false,
+      dayNight: json['dayNight'] as String? ?? "off",
+      energy: json['energy'] as int? ?? 0,
+      exp: json['exp'] as int? ?? 0,
+      poison: json['poison'] as int? ?? 0,
+      rad: json['rad'] as int? ?? 0,
       commanders: json['commanders'] != null
           ? (json['commanders'] as List)
               .map((c) => Commander.fromJson(c as Map<String, dynamic>))
               .toList()
           : [],
-      commanderDamage: json['commanderDamage'] ?? 0,
+      commanderDamage: json['commanderDamage'] as int? ?? 0,
+      winCommanders: (json['winCommanders'] as Map?)?.cast<String, int>() ?? {},
     );
   }
 }
