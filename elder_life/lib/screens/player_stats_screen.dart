@@ -27,21 +27,22 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     setState(() {});
   }
 
-  /// Download player stats as JSON (Mobile version).
+  /// Download and share player stats as JSON (iOS/Android only).
   Future<void> _downloadStats() async {
-    // Convert the players list to JSON.
     final jsonData = jsonEncode(players.map((p) => p.toJson()).toList());
-    
-    // Get the temporary directory on the device.
+
     final directory = await getTemporaryDirectory();
     final filePath = '${directory.path}/player_stats.json';
-    
-    // Write the JSON data to a file.
+
     final file = File(filePath);
     await file.writeAsString(jsonData);
-    
-    // Share the file using the share_plus package.
-    await Share.shareFiles([filePath], text: 'Player Stats');
+
+    final xFile = XFile(file.path);
+    await Share.shareXFiles(
+      [xFile],
+      text: 'Check out my Elder Life stats!',
+      subject: 'Player Stats Export',
+    );
   }
 
   /// Helper: Build an "indented" card using a matching background and border.
