@@ -21,10 +21,6 @@ dependencies:
   flutter_svg: ^2.0.0
 
  
-
-
-
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -36,7 +32,6 @@ flutter:
 
   assets:
     - assets/background.jpg
-    - assets/App_Icon.png
     - assets/Offline_Game_Icon.PNG
     - assets/Online_Game_Icon.PNG
     - assets/Player_Icon.PNG
