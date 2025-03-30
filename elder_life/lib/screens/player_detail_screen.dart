@@ -17,10 +17,10 @@ class PlayerDetailScreen extends StatefulWidget {
   final bool isCommanderGame;
 
   const PlayerDetailScreen({
-    Key? key,
+    super.key,
     required this.player,
     this.isCommanderGame = false,
-  }) : super(key: key);
+  });
 
   @override
   _PlayerDetailScreenState createState() => _PlayerDetailScreenState();

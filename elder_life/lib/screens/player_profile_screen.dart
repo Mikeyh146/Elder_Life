@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PlayerProfileScreen extends StatefulWidget {
-  const PlayerProfileScreen({Key? key}) : super(key: key);
+  const PlayerProfileScreen({super.key});
 
   @override
   State<PlayerProfileScreen> createState() => _PlayerProfileScreenState();

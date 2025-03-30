@@ -8,12 +8,12 @@ class MagicCircleButton extends StatefulWidget {
   final Color iconColor;     // Color to tint the SVG
 
   const MagicCircleButton({
-    Key? key,
+    super.key,
     required this.label,
     required this.onTap,
     required this.svgIcon,
     this.iconColor = Colors.white,
-  }) : super(key: key);
+  });
 
   @override
   State<MagicCircleButton> createState() => _MagicCircleButtonState();

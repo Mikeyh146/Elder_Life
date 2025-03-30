@@ -7,14 +7,13 @@ class CustomCircleIconTextButton extends StatelessWidget {
   final VoidCallback onTap;
 
   const CustomCircleIconTextButton({
-    Key? key,
+    super.key,
     this.imagePath,
     this.iconData,
     required this.label,
     required this.onTap,
   })  : assert(imagePath != null || iconData != null,
-            'Either imagePath or iconData must be provided'),
-        super(key: key);
+            'Either imagePath or iconData must be provided');
 
   @override
   Widget build(BuildContext context) {

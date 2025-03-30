@@ -10,11 +10,11 @@ class GameScreen extends StatefulWidget {
   final bool isCommanderGame; // New flag
 
   const GameScreen({
-    Key? key,
+    super.key,
     required this.players,
     required this.startingLife,
     required this.isCommanderGame,
-  }) : super(key: key);
+  });
 
   @override
   _GameScreenState createState() => _GameScreenState();

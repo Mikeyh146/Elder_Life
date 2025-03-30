@@ -26,7 +26,7 @@ class PlayerCard extends StatefulWidget {
   final List<Commander> activeCommanders;
 
   const PlayerCard({
-    Key? key,
+    super.key,
     required this.player,
     required this.lifeTotal,
     required this.onLifeChange,
@@ -42,7 +42,7 @@ class PlayerCard extends StatefulWidget {
     required this.onAscendToggle,
     required this.onFlip,
     required this.activeCommanders,
-  }) : super(key: key);
+  });
 
   @override
   _PlayerCardState createState() => _PlayerCardState();
