@@ -1,6 +1,8 @@
 import 'dart:convert';
-import 'dart:html' as html; // For download functionality on Web.
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/player.dart';
 import '../services/local_storage.dart';
 
@@ -25,19 +27,21 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     setState(() {});
   }
 
-  /// Download player stats as JSON (Web only).
-  void _downloadStats() {
+  /// Download player stats as JSON (Mobile version).
+  Future<void> _downloadStats() async {
+    // Convert the players list to JSON.
     final jsonData = jsonEncode(players.map((p) => p.toJson()).toList());
-    final bytes = utf8.encode(jsonData);
-    final blob = html.Blob([bytes]);
-    final url = html.Url.createObjectUrlFromBlob(blob);
-    final anchor = html.AnchorElement(href: url)
-      ..style.display = 'none'
-      ..download = 'player_stats.json';
-    html.document.body!.children.add(anchor);
-    anchor.click();
-    html.document.body!.children.remove(anchor);
-    html.Url.revokeObjectUrl(url);
+    
+    // Get the temporary directory on the device.
+    final directory = await getTemporaryDirectory();
+    final filePath = '${directory.path}/player_stats.json';
+    
+    // Write the JSON data to a file.
+    final file = File(filePath);
+    await file.writeAsString(jsonData);
+    
+    // Share the file using the share_plus package.
+    await Share.shareFiles([filePath], text: 'Player Stats');
   }
 
   /// Helper: Build an "indented" card using a matching background and border.
@@ -70,29 +74,47 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text("Players",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.vertical,
                 child: DataTable(
                   columnSpacing: 12,
                   columns: const [
-                    DataColumn(label: Text("Name", style: TextStyle(color: Colors.white))),
-                    DataColumn(label: Text("W", style: TextStyle(color: Colors.white))),
-                    DataColumn(label: Text("L", style: TextStyle(color: Colors.white))),
-                    DataColumn(label: Text("G", style: TextStyle(color: Colors.white))),
-                    DataColumn(label: Text("Ratio", style: TextStyle(color: Colors.white))),
+                    DataColumn(
+                        label: Text("Name",
+                            style: TextStyle(color: Colors.white))),
+                    DataColumn(
+                        label: Text("W",
+                            style: TextStyle(color: Colors.white))),
+                    DataColumn(
+                        label: Text("L",
+                            style: TextStyle(color: Colors.white))),
+                    DataColumn(
+                        label: Text("G",
+                            style: TextStyle(color: Colors.white))),
+                    DataColumn(
+                        label: Text("Ratio",
+                            style: TextStyle(color: Colors.white))),
                   ],
                   rows: players.map((player) {
                     double ratio = player.losses > 0
                         ? player.wins / player.losses
                         : player.wins.toDouble();
                     return DataRow(cells: [
-                      DataCell(Text(player.name, style: const TextStyle(color: Colors.white))),
-                      DataCell(Text(player.wins.toString(), style: const TextStyle(color: Colors.white))),
-                      DataCell(Text(player.losses.toString(), style: const TextStyle(color: Colors.white))),
-                      DataCell(Text(player.gamesPlayed.toString(), style: const TextStyle(color: Colors.white))),
-                      DataCell(Text(ratio.toStringAsFixed(2), style: const TextStyle(color: Colors.white))),
+                      DataCell(Text(player.name,
+                          style: const TextStyle(color: Colors.white))),
+                      DataCell(Text(player.wins.toString(),
+                          style: const TextStyle(color: Colors.white))),
+                      DataCell(Text(player.losses.toString(),
+                          style: const TextStyle(color: Colors.white))),
+                      DataCell(Text(player.gamesPlayed.toString(),
+                          style: const TextStyle(color: Colors.white))),
+                      DataCell(Text(ratio.toStringAsFixed(2),
+                          style: const TextStyle(color: Colors.white))),
                     ]);
                   }).toList(),
                 ),
@@ -109,7 +131,8 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     Map<String, int> commanderWins = {};
     for (var player in players) {
       player.winCommanders.forEach((commander, wins) {
-        commanderWins[commander] = (commanderWins[commander] ?? 0) + wins;
+        commanderWins[commander] =
+            (commanderWins[commander] ?? 0) + wins;
       });
     }
     if (commanderWins.isEmpty) {
@@ -129,7 +152,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text("Commanders Leaderboard",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
             Expanded(
               child: ListView.builder(
                 itemCount: sortedList.length,
@@ -137,8 +163,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
                   var entry = sortedList[index];
                   return ListTile(
                     dense: true,
-                    title: Text(entry.key, style: const TextStyle(color: Colors.white)),
-                    trailing: Text(entry.value.toString(), style: const TextStyle(color: Colors.white)),
+                    title: Text(entry.key,
+                        style: const TextStyle(color: Colors.white)),
+                    trailing: Text(entry.value.toString(),
+                        style: const TextStyle(color: Colors.white)),
                   );
                 },
               ),
@@ -168,7 +196,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text("Player Leaderboard",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white)),
             Expanded(
               child: ListView.builder(
                 itemCount: sortedPlayers.length,
@@ -176,8 +207,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
                   Player player = sortedPlayers[index];
                   return ListTile(
                     dense: true,
-                    title: Text(player.name, style: const TextStyle(color: Colors.white)),
-                    trailing: Text(player.wins.toString(), style: const TextStyle(color: Colors.white)),
+                    title: Text(player.name,
+                        style: const TextStyle(color: Colors.white)),
+                    trailing: Text(player.wins.toString(),
+                        style: const TextStyle(color: Colors.white)),
                   );
                 },
               ),
@@ -196,7 +229,9 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
           padding: const EdgeInsets.all(16),
           child: Text("Graph Visual Placeholder",
               style: const TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white)),
         ),
       ),
     );
@@ -231,7 +266,8 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
                     icon: const Icon(Icons.download),
                     label: const Text("Download Stats"),
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                     ),
                   ),
                 ],
