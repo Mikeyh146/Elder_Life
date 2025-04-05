@@ -24,9 +24,11 @@ class PlayerCard extends StatefulWidget {
   final VoidCallback onFlip;
   // List of active commanders available in the game.
   final List<Commander> activeCommanders;
+  //New: Timer value (in seconds) for this player.
+  final int timerValue;
 
   const PlayerCard({
-    super.key,
+    Key? key,
     required this.player,
     required this.lifeTotal,
     required this.onLifeChange,
@@ -42,7 +44,8 @@ class PlayerCard extends StatefulWidget {
     required this.onAscendToggle,
     required this.onFlip,
     required this.activeCommanders,
-  });
+    required this.timerValue,
+  }) : super(key: key);
 
   @override
   _PlayerCardState createState() => _PlayerCardState();
@@ -50,6 +53,8 @@ class PlayerCard extends StatefulWidget {
 
 class _PlayerCardState extends State<PlayerCard> {
   bool isFront = true; // true: showing front; false: showing back
+ // New: Map to track damage by each commander (by their ID).
+  Map<String, int> _commanderDamageMap = {};
 
   void _flipCard() {
     setState(() {
@@ -58,22 +63,50 @@ class _PlayerCardState extends State<PlayerCard> {
     widget.onFlip();
   }
 
+  // Helper method to format seconds as MM:SS.
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return "${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
+  }
+
+  // New helper: _buildLifeButton
+  Widget _buildLifeButton({
+    required IconData icon,
+    required Color btnColor,
+    required VoidCallback onTap,
+    required VoidCallback onLongPress,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        decoration: BoxDecoration(
+          color: btnColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.white, size: 30),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final bool koStatus = widget.lifeTotal <= 0;
+    final bool isKO = widget.lifeTotal <= 0;
 
     return AnimatedOpacity(
-      opacity: koStatus ? 0.4 : 1.0,
+      opacity: isKO ? 0.4 : 1.0,
       duration: const Duration(milliseconds: 300),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 350),
         child: AspectRatio(
-          aspectRatio: 350 / 320, // similar to your HTML dimensions
+          aspectRatio: 350 / 320,
           child: Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            color: const Color(0xFF1E1E1E), // matches HTML card-face bg
+            color: const Color(0xFF1E1E1E),
             child: Column(
               children: [
                 // Expanded area for front/back content.
@@ -102,25 +135,17 @@ class _PlayerCardState extends State<PlayerCard> {
     );
   }
 
-  /// Builds the front of the card.
+  /// Builds the front side of the card.
   Widget _buildFront() {
-  final bool koStatus = widget.lifeTotal <= 0;
-  // Use the first commander's image if available.
-  String? commanderImage = widget.player.commanders.isNotEmpty
-      ? widget.player.commanders.first.imageUrl
-      : null;
-  
   return Stack(
     fit: StackFit.expand,
     children: [
-      // Background: commander art if available.
-      if (commanderImage != null)
-        Image.network(
-          commanderImage,
-          fit: BoxFit.cover,
-        ),
-      // Dark overlay for readability.
+      // Solid dark background instead of commander image.
+      Container(color: Colors.grey[900]),
+
+      // Optional dark overlay for consistent contrast.
       Container(color: Colors.black.withOpacity(0.5)),
+
       // Main content.
       Container(
         padding: const EdgeInsets.all(16),
@@ -148,25 +173,21 @@ class _PlayerCardState extends State<PlayerCard> {
               ],
             ),
             const SizedBox(height: 8),
-            // Player name (styled like an input).
-            TextField(
-              controller: TextEditingController(text: widget.player.name),
+
+            // Player name.
+            Text(
+              widget.player.name,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 20, color: Colors.white),
-              decoration: InputDecoration(
-                border: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.grey.shade600),
-                ),
-                focusedBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Colors.white),
-                ),
+              style: const TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
+
             const Spacer(),
-            // Life total row centered.
+
+            // Life total row.
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -194,8 +215,12 @@ class _PlayerCardState extends State<PlayerCard> {
                 ),
               ],
             ),
+
             const Spacer(),
-            if (koStatus)
+
+            
+
+            if (widget.lifeTotal <= 0)
               ElevatedButton(
                 onPressed: widget.onRejoin,
                 child: const Text("Rejoin"),
@@ -208,30 +233,8 @@ class _PlayerCardState extends State<PlayerCard> {
 }
 
 
-  /// Builds a life change button with a similar style to HTML.
-  Widget _buildLifeButton({
-    required IconData icon,
-    required Color btnColor,
-    required VoidCallback onTap,
-    required VoidCallback onLongPress,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        decoration: BoxDecoration(
-          color: btnColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: Colors.white, size: 30),
-      ),
-    );
-  }
-
-  /// Builds the back of the card.
+  /// Builds the back side of the card.
   Widget _buildBack() {
-    // Build grid cells for toggles, counters, and actions.
     List<Widget> cells = [
       _buildToggleSquare(
         label: "Monarch",
@@ -289,7 +292,7 @@ class _PlayerCardState extends State<PlayerCard> {
       _buildCommanderDamageSquare(),
     ];
 
-    // Fill remaining cells to reach a 6x3 grid.
+    // Fill remaining cells to complete a 6x3 grid.
     while (cells.length < 18) {
       cells.add(Container());
     }
@@ -345,10 +348,7 @@ class _PlayerCardState extends State<PlayerCard> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                label,
-                style: const TextStyle(fontSize: 12, color: Colors.white),
-              ),
+              Text(label, style: const TextStyle(fontSize: 12, color: Colors.white)),
             ],
           ),
         ),
@@ -370,14 +370,7 @@ class _PlayerCardState extends State<PlayerCard> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(label, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
           Text("$value", style: const TextStyle(fontSize: 16, color: Colors.white)),
           const SizedBox(height: 4),
@@ -417,138 +410,155 @@ class _PlayerCardState extends State<PlayerCard> {
           borderRadius: BorderRadius.circular(8),
         ),
         child: Center(
-          child: Text(
-            label,
-            style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold),
-          ),
+          child: Text(label, style: const TextStyle(fontSize: 14, color: Colors.white, fontWeight: FontWeight.bold)),
         ),
       ),
     );
   }
-
-  Widget _buildCommanderDamageSquare() {
-    return GestureDetector(
-      onTap: _onCommanderDamagePressed,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.pink[700],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text("C-DAM", style: TextStyle(fontSize: 14, color: Colors.white)),
-              const SizedBox(height: 4),
-              Text("${widget.player.commanderDamage}", style: const TextStyle(fontSize: 16, color: Colors.white)),
-            ],
-          ),
+/// Builds the Commander Damage square (button) shown on the back of the card.
+/// Builds the Commander Damage square (button) shown on the back of the card.
+Widget _buildCommanderDamageSquare() {
+  // Sum up the damage from all opponent commanders.
+  int totalDamage = 0;
+  for (var cmdr in widget.activeCommanders) {
+    totalDamage += _commanderDamageMap[cmdr.id] ?? 0;
+  }
+  return GestureDetector(
+    onTap: _onCommanderDamagePressed,
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.pink[700],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("C-DAM", style: TextStyle(fontSize: 14, color: Colors.white)),
+            const SizedBox(height: 4),
+            Text("$totalDamage", style: const TextStyle(fontSize: 16, color: Colors.white)),
+          ],
         ),
       ),
+    ),
+  );
+}
+
+/// Opens a dialog showing opponent commanders with their images and -/+ buttons.
+void _onCommanderDamagePressed() {
+  // Use the opponent commanders list provided in activeCommanders.
+  List<Commander> opponents = widget.activeCommanders;
+  if (opponents.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("No opponent commanders available.")),
     );
+    return;
   }
-
-  void _onCommanderDamagePressed() {
-    List<Commander> availableCommanders = widget.activeCommanders.isNotEmpty
-        ? widget.activeCommanders
-        : widget.player.commanders;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        int localCommandDamage = widget.player.commanderDamage;
-        Commander? selectedCommander;
-        return StatefulBuilder(
-          builder: (context, setStateDialog) {
-            return AlertDialog(
-              title: const Text("Commander Damage"),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    height: 150,
-                    child: availableCommanders.isEmpty
-                        ? const Text("No available commanders")
-                        : ListView.builder(
-                            itemCount: availableCommanders.length,
-                            itemBuilder: (context, index) {
-                              final cmdr = availableCommanders[index];
-                              return ListTile(
-                                leading: Image.network(
-                                  cmdr.imageUrl,
-                                  width: 50,
-                                  height: 70,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return const Icon(Icons.image, size: 50, color: Colors.white);
-                                  },
-                                ),
-                                title: Text(cmdr.name),
-                                selected: selectedCommander == cmdr,
-                                onTap: () {
-                                  setStateDialog(() {
-                                    selectedCommander = cmdr;
-                                  });
-                                },
-                              );
+  // Create a local copy of damage values.
+  Map<String, int> localDamage = {};
+  for (var cmdr in opponents) {
+    localDamage[cmdr.id] = _commanderDamageMap[cmdr.id] ?? 0;
+  }
+  showDialog(
+    context: context,
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text("Adjust Opponent Commander Damage"),
+            content: Container(
+              width: 220, // Fixed width for a smaller dialog
+              height: 220, // Fixed height for a smaller dialog
+              child: GridView.count(
+                crossAxisCount: 2,
+                mainAxisSpacing: 4,
+                crossAxisSpacing: 4,
+                shrinkWrap: true,
+                children: opponents.map((cmdr) {
+                  int damage = localDamage[cmdr.id] ?? 0;
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Display the commander's card image.
+                      Image.network(
+                        cmdr.imageUrl,
+                        height: 60,
+                        width: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return const Icon(Icons.image, size: 40, color: Colors.white);
+                        },
+                      ),
+                      const SizedBox(height: 2),
+                      Text("Damage: $damage",
+                          style: const TextStyle(color: Colors.white, fontSize: 14)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                            iconSize: 20,
+                            icon: const Icon(Icons.remove, color: Colors.white),
+                            onPressed: () {
+                              setStateDialog(() {
+                                if (damage > 0) localDamage[cmdr.id] = damage - 1;
+                              });
                             },
                           ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text("Commander Damage: $localCommandDamage"),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove),
-                        onPressed: () {
-                          setStateDialog(() {
-                            if (localCommandDamage > 0) localCommandDamage--;
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          setStateDialog(() {
-                            localCommandDamage++;
-                          });
-                        },
+                          IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+                            iconSize: 20,
+                            icon: const Icon(Icons.add, color: Colors.white),
+                            onPressed: () {
+                              setStateDialog(() {
+                                localDamage[cmdr.id] = damage + 1;
+                              });
+                            },
+                          ),
+                        ],
                       ),
                     ],
-                  ),
-                ],
+                  );
+                }).toList(),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text("Cancel"),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (selectedCommander == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Please select a commander.")),
-                      );
-                      return;
-                    }
-                    int delta = localCommandDamage - widget.player.commanderDamage;
-                    widget.onLifeChange(-delta);
-                    setState(() {
-                      widget.player.commanderDamage = localCommandDamage;
-                    });
-                    Navigator.pop(context);
-                    if (widget.player.commanderDamage >= 21) {
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () {
+                  // Sum up the total damage from opponent commanders.
+                  int totalDamage = localDamage.values.fold(0, (sum, val) => sum + val);
+                  // Calculate the difference from the player's current stored commander damage.
+                  int damageDelta = totalDamage - widget.player.commanderDamage;
+                  // Subtract the additional damage from the player's life total.
+                  widget.onLifeChange(-damageDelta);
+                  // Update the player's stored commander damage.
+                  widget.player.commanderDamage = totalDamage;
+                  // Save the new damage values in the map and trigger KO if any damage is 21 or more.
+                  for (var cmdr in opponents) {
+                    _commanderDamageMap[cmdr.id] = localDamage[cmdr.id] ?? 0;
+                    if ((_commanderDamageMap[cmdr.id] ?? 0) >= 21) {
                       widget.onKO();
+                      break;
                     }
-                  },
-                  child: const Text("OK"),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+
 }

@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:elder_life/widgets/custom_circle_icon_text_button.dart'; // Updated import
-
-// Import destination screens
+import 'select_players_screen.dart';
 import 'online_game_screen.dart';
-import 'new_game_start_screen.dart';       // Offline game
 import 'player_stats_screen.dart';
-import 'manage_players_screen.dart';       // For player management
+import 'manage_players_screen.dart';
 import 'player_profile_screen.dart';
 import 'settings_screen.dart';
+import 'package:elder_life/widgets/custom_circle_icon_text_button.dart';
+import 'package:elder_life/screens/new_game_start_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -17,7 +16,7 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       body: Stack(
         children: [
-          // Background image
+          // Background image (if you want to keep it) or a color.
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -26,7 +25,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          // Dark overlay (opacity increased to 0.7)
+          // Dark overlay (increased opacity to 0.7).
           Container(
             color: Colors.black.withOpacity(0.7),
           ),
@@ -38,7 +37,8 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 CustomCircleIconTextButton(
-                  imagePath: 'assets/Offline_Game_Icon.PNG',
+                  // Use stock icon for offline game.
+                  iconData: Icons.videogame_asset,
                   label: 'Offline Game',
                   onTap: () {
                     Navigator.push(
@@ -51,7 +51,8 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 CustomCircleIconTextButton(
-                  imagePath: 'assets/Online_Game_Icon.PNG',
+                  // Use stock icon for online game.
+                  iconData: Icons.wifi,
                   label: 'Online Game',
                   onTap: () {
                     Navigator.push(
@@ -63,9 +64,9 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
-                // Player Management now navigates to ManagePlayersScreen
                 CustomCircleIconTextButton(
-                  imagePath: 'assets/Player_Icon.PNG',
+                  // Use stock icon for player management.
+                  iconData: Icons.people,
                   label: 'Player Management',
                   onTap: () {
                     Navigator.push(
@@ -77,9 +78,9 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 16),
-                // New button for Player Stats using an icon from Flutter's icon set
                 CustomCircleIconTextButton(
-                  iconData: Icons.insert_chart_outlined,
+                  // Use stock icon for player stats.
+                  iconData: Icons.insert_chart,
                   label: 'Player Stats',
                   onTap: () {
                     Navigator.push(
@@ -120,9 +121,8 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Image.asset('assets/Profile_Icon.png', fit: BoxFit.contain),
+                child: const Center(
+                  child: Icon(Icons.person, size: 32, color: Colors.black),
                 ),
               ),
             ),

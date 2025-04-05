@@ -17,10 +17,10 @@ class PlayerDetailScreen extends StatefulWidget {
   final bool isCommanderGame;
 
   const PlayerDetailScreen({
-    super.key,
+    Key? key,
     required this.player,
     this.isCommanderGame = false,
-  });
+  }) : super(key: key);
 
   @override
   _PlayerDetailScreenState createState() => _PlayerDetailScreenState();
@@ -116,7 +116,8 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                                   },
                                 ),
                                 title: Text(result.name),
-                                onTap: () => Navigator.pop(context, result),
+                                onTap: () =>
+                                    Navigator.pop(context, result),
                               );
                             },
                           ),
@@ -135,7 +136,8 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
       },
     );
 
-    if (selectedCommander != null && selectedCommander.name.isNotEmpty) {
+    if (selectedCommander != null &&
+        selectedCommander.name.isNotEmpty) {
       setState(() {
         currentPlayer!.commanders.add(
           Commander(
@@ -200,14 +202,12 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
     );
   }
 
-  /// Build the top content (player name, etc.) with no background color.
-  /// If Commander game + at least one commander with a valid image => use that image
-  /// Otherwise, let the parent's background show through (fully transparent).
+  /// Build the top content (player name, etc.) without an edit button.
   Widget _buildFrontContent() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Row of status icons if needed, or remove entirely if you don't want them.
+        // Row of status icons.
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -229,7 +229,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
           ],
         ),
         const SizedBox(height: 8),
-        // Player name row.
+        // Player name row (edit button removed).
         Row(
           children: [
             Expanded(
@@ -242,67 +242,83 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                 ),
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white),
-              onPressed: _editPlayerName,
-            ),
           ],
         ),
       ],
     );
   }
 
-  // Dialog for editing player's name
-  Future<String?> _showEditPlayerNameDialog(String currentName) {
-    TextEditingController controller = TextEditingController(text: currentName);
-    return showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Edit Player Name"),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: "Enter new player name"),
+  /// Helper widget to build a commander row with card art, placeholder stats, and a delete button.
+  Widget _buildCommanderRow(Commander commander) {
+    return Card(
+      color: Colors.transparent,
+      child: ListTile(
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        leading: Image.network(
+          commander.imageUrl,
+          width: 50,
+          height: 70,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.image, size: 50, color: Colors.white),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, null),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text.trim()),
-            child: const Text("Save"),
-          ),
-        ],
+        title: Text(
+          commander.name,
+          style: const TextStyle(fontSize: 18, color: Colors.white),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text("Games Played: 0", style: TextStyle(color: Colors.white)),
+            Text("Victories: 0", style: TextStyle(color: Colors.white)),
+            Text("Losses: 0", style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        trailing: IconButton(
+          icon: const Icon(Icons.close, color: Colors.red),
+          onPressed: () async {
+            bool? confirmed = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text("Remove Commander"),
+                content: const Text(
+                    "Are you sure you want to remove this commander?"),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text("No")),
+                  TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text("Yes")),
+                ],
+              ),
+            );
+            if (confirmed == true) {
+              setState(() {
+                currentPlayer!.commanders
+                    .removeWhere((cmd) => cmd.id == commander.id);
+              });
+              await _updatePlayerInStorage();
+            }
+          },
+        ),
+        onTap: () => _showCommanderImage(commander),
       ),
     );
-  }
-
-  void _editPlayerName() async {
-    if (currentPlayer == null) return;
-    String? newName = await _showEditPlayerNameDialog(currentPlayer!.name);
-    if (newName != null && newName.isNotEmpty && newName != currentPlayer!.name) {
-      setState(() {
-        currentPlayer!.name = newName;
-      });
-      await _updatePlayerInStorage();
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final displayPlayer = currentPlayer ?? widget.player;
-
-    // If it's a commander game and there's at least one commander with an image, show that image
-    // otherwise we let the parent's background show.
     bool useCommanderBg = widget.isCommanderGame &&
         displayPlayer.commanders.isNotEmpty &&
         displayPlayer.commanders.first.imageUrl.isNotEmpty;
 
     return Scaffold(
-      // No AppBar => full screen background
       body: Stack(
         children: [
-          // The main background from your assets
+          // Background image.
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -311,22 +327,20 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
               ),
             ),
           ),
-          // Dark overlay
-          Container(color: Colors.black.withOpacity(0.7)),
-
-          // Main scrollable content
+          // Increased dark overlay.
+          Container(color: Colors.black.withOpacity(0.9)),
+          // Main content.
           SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // If we want to show the commander image, do so here. If not, do nothing.
                 if (useCommanderBg)
                   Container(
                     height: 200,
                     width: double.infinity,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.transparent),
+                    decoration: const BoxDecoration(
+                      border: Border.fromBorderSide(BorderSide.none),
                     ),
                     child: Stack(
                       fit: StackFit.expand,
@@ -338,9 +352,7 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                             return Container(color: Colors.grey[900]);
                           },
                         ),
-                        // Optional additional overlay if needed
                         Container(color: Colors.black.withOpacity(0.3)),
-                        // Then the top content (player name, etc.)
                         Padding(
                           padding: const EdgeInsets.all(16),
                           child: _buildFrontContent(),
@@ -349,65 +361,50 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
                     ),
                   )
                 else
-                  // If no commander image, just show the top content with no box background
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
                     child: _buildFrontContent(),
                   ),
-
                 const Divider(color: Colors.white70, thickness: 2),
                 const SizedBox(height: 10),
-                // Commanders header
                 const Text(
                   "Commanders",
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 const SizedBox(height: 10),
-
-                // List of commanders
+                // Build the commander list using our custom row widget.
                 displayPlayer.commanders.isEmpty
                     ? const Center(
                         child: Text(
                           "No commanders added",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
+                          style:
+                              TextStyle(fontSize: 18, color: Colors.white),
                         ),
                       )
                     : Column(
-                        children: displayPlayer.commanders.map((commander) {
-                          return ListTile(
-                            leading: Image.network(
-                              commander.imageUrl,
-                              width: 50,
-                              height: 70,
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Icon(Icons.image, size: 50, color: Colors.white);
-                              },
-                            ),
-                            title: Text(commander.name,
-                                style: const TextStyle(fontSize: 18, color: Colors.white)),
-                            onTap: () => _showCommanderImage(commander),
-                          );
-                        }).toList(),
+                        children: displayPlayer.commanders
+                            .map((commander) => _buildCommanderRow(commander))
+                            .toList(),
                       ),
                 const SizedBox(height: 20),
-
-                // Add commander button
                 Center(
                   child: ElevatedButton(
                     onPressed: _addCommander,
                     style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 30, vertical: 15),
                     ),
-                    child: const Text("Add a Commander", style: TextStyle(fontSize: 18)),
+                    child: const Text("Add a Commander",
+                        style: TextStyle(fontSize: 18)),
                   ),
                 ),
                 const SizedBox(height: 80),
               ],
             ),
           ),
-
-          // Floating back button at bottom left
           Positioned(
             bottom: 24,
             left: 24,

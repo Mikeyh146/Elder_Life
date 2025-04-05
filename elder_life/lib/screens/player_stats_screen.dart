@@ -2,12 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import '../models/player.dart';
 import '../services/local_storage.dart';
 
 class PlayerStatsScreen extends StatefulWidget {
-  const PlayerStatsScreen({super.key});
+  const PlayerStatsScreen({Key? key}) : super(key: key);
 
   @override
   _PlayerStatsScreenState createState() => _PlayerStatsScreenState();
@@ -27,25 +26,31 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     setState(() {});
   }
 
-  /// Download and share player stats as JSON (iOS/Android only).
+  /// Updated function to download the JSON file.
   Future<void> _downloadStats() async {
-    final jsonData = jsonEncode(players.map((p) => p.toJson()).toList());
+    try {
+      // Convert the list of players to JSON.
+      final jsonStats = jsonEncode(players.map((p) => p.toJson()).toList());
 
-    final directory = await getTemporaryDirectory();
-    final filePath = '${directory.path}/player_stats.json';
+      // Get the app's document directory.
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/player_stats.json';
+      final file = File(filePath);
 
-    final file = File(filePath);
-    await file.writeAsString(jsonData);
+      // Write the JSON string to the file.
+      await file.writeAsString(jsonStats);
 
-    final xFile = XFile(file.path);
-    await Share.shareXFiles(
-      [xFile],
-      text: 'Check out my Elder Life stats!',
-      subject: 'Player Stats Export',
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Player stats downloaded to: $filePath")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to download stats: $e")),
+      );
+    }
   }
 
-  /// Helper: Build an "indented" card using a matching background and border.
+  /// Helper: Build an indented card with a matching background and border.
   Widget _buildIndentedCard({required Widget child}) {
     return Container(
       height: 300,
@@ -63,8 +68,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     if (players.isEmpty) {
       return _buildIndentedCard(
         child: const Center(
-          child: Text("No player data available",
-              style: TextStyle(color: Colors.white, fontSize: 16)),
+          child: Text(
+            "No player data available",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
         ),
       );
     }
@@ -74,11 +81,13 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Players",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
+            const Text(
+              "Players",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 scrollDirection: Axis.vertical,
@@ -139,8 +148,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     if (commanderWins.isEmpty) {
       return _buildIndentedCard(
         child: const Center(
-          child: Text("No commander wins recorded",
-              style: TextStyle(color: Colors.white, fontSize: 16)),
+          child: Text(
+            "No commander wins recorded",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
         ),
       );
     }
@@ -152,11 +163,13 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Commanders Leaderboard",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
+            const Text(
+              "Commanders Leaderboard",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
             Expanded(
               child: ListView.builder(
                 itemCount: sortedList.length,
@@ -183,8 +196,10 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
     if (players.isEmpty) {
       return _buildIndentedCard(
         child: const Center(
-          child: Text("No player data available",
-              style: TextStyle(color: Colors.white, fontSize: 16)),
+          child: Text(
+            "No player data available",
+            style: TextStyle(color: Colors.white, fontSize: 16),
+          ),
         ),
       );
     }
@@ -196,11 +211,13 @@ class _PlayerStatsScreenState extends State<PlayerStatsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Player Leaderboard",
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white)),
+            const Text(
+              "Player Leaderboard",
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
             Expanded(
               child: ListView.builder(
                 itemCount: sortedPlayers.length,

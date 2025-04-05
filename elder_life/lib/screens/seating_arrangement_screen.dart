@@ -1,215 +1,180 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/player.dart';
-import 'game_screen.dart';
+import 'game_screen.dart'; // Your game screen that accepts a seating order
 
 class SeatingArrangementScreen extends StatefulWidget {
   final List<Player> players;
   final int startingLife;
-  final bool isCommanderGame; // New flag
+  final bool isCommanderGame;
 
   const SeatingArrangementScreen({
-    super.key,
+    Key? key,
     required this.players,
     required this.startingLife,
     required this.isCommanderGame,
-  });
+  }) : super(key: key);
 
   @override
   _SeatingArrangementScreenState createState() => _SeatingArrangementScreenState();
 }
 
 class _SeatingArrangementScreenState extends State<SeatingArrangementScreen> {
-  // For a maximum of 6 players, always show 6 seats.
-  static const int fixedSeatCount = 6;
-  late List<Player?> assignedSeats;
+  // We'll allow up to 6 seats.
+  // For players less than 6, only that many seats will be active.
+  late Map<int, Player?> seatAssignments;
 
   @override
   void initState() {
     super.initState();
-    assignedSeats = List<Player?>.filled(fixedSeatCount, null);
+    // Pre-fill seats in order with null if not enough players.
+    int count = widget.players.length;
+    seatAssignments = Map.fromIterable(
+      List.generate(6, (index) => index),
+      key: (item) => item as int,
+      value: (item) => item < count ? widget.players[item as int] : null,
+    );
   }
 
-  List<Player> get availablePlayers => widget.players.where((p) => !assignedSeats.contains(p)).toList();
-
-  Future<void> _assignSeat(int seatIndex) async {
-    List<Player> options = availablePlayers;
-    if (assignedSeats[seatIndex] != null) {
-      options = List<Player>.from(options)..add(assignedSeats[seatIndex]!);
+  /// Opens a dialog to assign a player to the tapped seat.
+  void _assignPlayerToSeat(int seatIndex) async {
+    // Build a list of players not already assigned.
+    List<Player> available = widget.players
+        .where((p) => !seatAssignments.values.contains(p))
+        .toList();
+    // Also include the player already assigned at this seat, if any.
+    if (seatAssignments[seatIndex] != null) {
+      available.insert(0, seatAssignments[seatIndex]!);
     }
-    options.sort((a, b) => a.name.compareTo(b.name));
+    if (available.isEmpty) return;
     Player? selected = await showDialog<Player>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Select a player for this seat"),
-          content: SizedBox(
-            height: 250,
-            width: double.maxFinite,
-            child: ListView.builder(
-              itemCount: options.length,
-              itemBuilder: (context, index) {
-                final player = options[index];
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.grey[800],
-                    child: Text(
-                      player.name.substring(0, 1).toUpperCase(),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                  ),
-                  title: Text(player.name),
-                  onTap: () => Navigator.pop(context, player),
-                );
-              },
-            ),
+      builder: (context) => AlertDialog(
+        title: const Text("Assign Player to Seat"),
+        content: SizedBox(
+          height: 200,
+          child: ListView.builder(
+            itemCount: available.length,
+            itemBuilder: (context, index) {
+              final player = available[index];
+              return ListTile(
+                title: Text(player.name),
+                onTap: () => Navigator.pop(context, player),
+              );
+            },
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, null),
-              child: const Text("Cancel"),
-            ),
-          ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text("Cancel"),
+          ),
+        ],
+      ),
     );
     if (selected != null) {
       setState(() {
-        assignedSeats[seatIndex] = selected;
+        seatAssignments[seatIndex] = selected;
       });
     }
   }
 
-  bool get allSeatsAssigned {
-    // Ensure the number of filled seats equals the number of selected players.
-    return assignedSeats.where((s) => s != null).length == widget.players.length;
+  /// Build a seat widget with a circular background.
+  Widget _buildSeatWidget(int seatIndex) {
+    final assigned = seatAssignments[seatIndex];
+    return GestureDetector(
+      onTap: () => _assignPlayerToSeat(seatIndex),
+      child: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: assigned != null ? Colors.green : Colors.grey[600],
+          border: Border.all(color: Colors.black, width: 2),
+        ),
+        child: Center(
+          child: Text(
+            assigned != null
+                ? assigned.name.substring(0, math.min(assigned.name.length, 3))
+                : "Seat",
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ),
+      ),
+    );
   }
 
-  void _confirmSeating() {
-    if (!allSeatsAssigned) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please assign seats for all players.")),
-      );
-      return;
-    }
-    List<Player> seatingOrder = assignedSeats.whereType<Player>().toList();
-    Navigator.pushReplacement(
+  /// Build a table layout with seats placed around a rectangle.
+  Widget _buildTableLayout() {
+    // Here we position 6 seat placeholders around a centered table.
+    return Stack(
+      children: [
+        // The table (centered rectangle).
+        Center(
+          child: Container(
+            width: 300,
+            height: 200,
+            decoration: BoxDecoration(
+              color: Colors.brown[700],
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        // Top-left seat.
+        Positioned(
+          top: 40,
+          left: 40,
+          child: _buildSeatWidget(0),
+        ),
+        // Top-right seat.
+        Positioned(
+          top: 40,
+          right: 40,
+          child: _buildSeatWidget(1),
+        ),
+        // Bottom-left seat.
+        Positioned(
+          bottom: 40,
+          left: 40,
+          child: _buildSeatWidget(2),
+        ),
+        // Bottom-right seat.
+        Positioned(
+          bottom: 40,
+          right: 40,
+          child: _buildSeatWidget(3),
+        ),
+        // Left-middle seat.
+        Positioned(
+          left: 0,
+          top: 100,
+          child: _buildSeatWidget(4),
+        ),
+        // Right-middle seat.
+        Positioned(
+          right: 0,
+          top: 100,
+          child: _buildSeatWidget(5),
+        ),
+      ],
+    );
+  }
+
+  void _startGame() {
+    // Build a list of assigned players in seat order,
+    // then filter out any nulls.
+    List<Player> seatedPlayers =
+        seatAssignments.values.whereType<Player>().toList();
+    // For debugging:
+    print("Seated Players: ${seatedPlayers.map((p) => p.name).toList()}");
+    // Navigate to the game screen with the seating order.
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => GameScreen(
-          players: seatingOrder,
+          players: seatedPlayers,
           startingLife: widget.startingLife,
-          isCommanderGame: widget.isCommanderGame, // Pass flag to game screen.
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSeatingLayout() {
-    const double containerSize = 500;
-    const double seatSize = 80;
-    const double gap = 20;
-
-    final double tableWidth = 200;
-    final double tableHeight = 100;
-    final double tableLeft = (containerSize - tableWidth) / 2;
-    final double tableTop = (containerSize - tableHeight) / 2;
-    final Rect tableRect = Rect.fromLTWH(tableLeft, tableTop, tableWidth, tableHeight);
-
-    List<Widget> seatWidgets = [];
-    // Define fixed positions for 6 seats.
-    seatWidgets.add(Positioned(
-      left: tableRect.left,
-      top: tableRect.top - seatSize - gap,
-      child: _buildSeatWidget(0),
-    ));
-    seatWidgets.add(Positioned(
-      left: tableRect.right - seatSize,
-      top: tableRect.top - seatSize - gap,
-      child: _buildSeatWidget(1),
-    ));
-    seatWidgets.add(Positioned(
-      left: tableRect.left - seatSize - gap,
-      top: tableRect.top + tableHeight / 2 - seatSize / 2,
-      child: _buildSeatWidget(2),
-    ));
-    seatWidgets.add(Positioned(
-      left: tableRect.right + gap,
-      top: tableRect.top + tableHeight / 2 - seatSize / 2,
-      child: _buildSeatWidget(3),
-    ));
-    seatWidgets.add(Positioned(
-      left: tableRect.left,
-      top: tableRect.bottom + gap,
-      child: _buildSeatWidget(4),
-    ));
-    seatWidgets.add(Positioned(
-      left: tableRect.right - seatSize,
-      top: tableRect.bottom + gap,
-      child: _buildSeatWidget(5),
-    ));
-
-    Widget tableWidget = Positioned(
-      left: tableRect.left,
-      top: tableRect.top,
-      child: Container(
-        width: tableWidth,
-        height: tableHeight,
-        decoration: BoxDecoration(
-          color: Colors.brown[400],
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-    );
-
-    return SizedBox(
-      width: containerSize,
-      height: containerSize,
-      child: Stack(
-        children: [
-          tableWidget,
-          ...seatWidgets,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSeatWidget(int index) {
-    return GestureDetector(
-      onTap: () => _assignSeat(index),
-      child: Container(
-        width: 80,
-        height: 80,
-        decoration: BoxDecoration(
-          color: Colors.grey[850],
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.white70, width: 2),
-        ),
-        child: Center(
-          child: assignedSeats[index] == null
-              ? const Text(
-                  "Tap to assign",
-                  style: TextStyle(color: Colors.white, fontSize: 12),
-                  textAlign: TextAlign.center,
-                )
-              : Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.grey[800],
-                      radius: 20,
-                      child: Text(
-                        assignedSeats[index]!.name.substring(0, 1).toUpperCase(),
-                        style: const TextStyle(color: Colors.white, fontSize: 20),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      assignedSeats[index]!.name,
-                      style: const TextStyle(color: Colors.white, fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+          isCommanderGame: widget.isCommanderGame,
         ),
       ),
     );
@@ -219,10 +184,19 @@ class _SeatingArrangementScreenState extends State<SeatingArrangementScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Seating Arrangement")),
-      body: Center(child: _buildSeatingLayout()),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _confirmSeating,
-        child: const Icon(Icons.check),
+      body: Column(
+        children: [
+          Expanded(
+            child: Center(
+              child: _buildTableLayout(),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: _startGame,
+            child: const Text("Start Game"),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

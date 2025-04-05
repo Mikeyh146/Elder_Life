@@ -26,12 +26,27 @@ class LocalStorage {
   }
 
   // Update stats for all players and persist them.
-  static Future<void> updateAllStats(List<Player> players) async {
-    final prefs = await SharedPreferences.getInstance();
-    final playersJson =
-        players.map((player) => jsonEncode(player.toJson())).toList();
-    await prefs.setStringList(_playersKey, playersJson);
+  static Future<void> updateAllStats(List<Player> updatedPlayers) async {
+  final prefs = await SharedPreferences.getInstance();
+  // Load all players currently stored.
+  List<Player> allPlayers = await getPlayers();
+  
+  // For each player from the game, update or add it in the full list.
+  for (var updated in updatedPlayers) {
+    int index = allPlayers.indexWhere((p) => p.id == updated.id);
+    if (index != -1) {
+      // Update the existing player.
+      allPlayers[index] = updated;
+    } else {
+      // If not found, add the player (if needed).
+      allPlayers.add(updated);
+    }
   }
+  
+  // Save the complete list back.
+  final playersJson = allPlayers.map((player) => jsonEncode(player.toJson())).toList();
+  await prefs.setStringList(_playersKey, playersJson);
+}
 
   // Update a single player's record.
   static Future<void> updatePlayer(Player player) async {
