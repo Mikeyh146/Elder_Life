@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/player.dart';
+import 'dart:async';
 import '../models/commander.dart';
 
 class PlayerCard extends StatefulWidget {
@@ -7,6 +8,7 @@ class PlayerCard extends StatefulWidget {
   final int lifeTotal;
   // Life change callbacks
   final Function(int delta) onLifeChange;
+  
   // K.O. & Rejoin callbacks
   final VoidCallback onKO;
   final VoidCallback onRejoin;
@@ -28,7 +30,7 @@ class PlayerCard extends StatefulWidget {
   final int timerValue;
 
   const PlayerCard({
-    Key? key,
+    super.key,
     required this.player,
     required this.lifeTotal,
     required this.onLifeChange,
@@ -45,7 +47,7 @@ class PlayerCard extends StatefulWidget {
     required this.onFlip,
     required this.activeCommanders,
     required this.timerValue,
-  }) : super(key: key);
+  });
 
   @override
   _PlayerCardState createState() => _PlayerCardState();
@@ -54,15 +56,34 @@ class PlayerCard extends StatefulWidget {
 class _PlayerCardState extends State<PlayerCard> {
   bool isFront = true; // true: showing front; false: showing back
  // New: Map to track damage by each commander (by their ID).
-  Map<String, int> _commanderDamageMap = {};
+   int _deltaLife = 0;
+   double _deltaOpacity = 0.0;
+   Timer? _deltaTimer;
+
+  final Map<String, int> _commanderDamageMap = {};
+  bool _isDefeatDialogShown = false;
 
   void _flipCard() {
+   
     setState(() {
       isFront = !isFront;
     });
     widget.onFlip();
   }
+void _updateDeltaLife(int delta) {
+  setState(() {
+    _deltaLife += delta;
+    _deltaOpacity = 1.0;
+  });
 
+  _deltaTimer?.cancel();
+  _deltaTimer = Timer(const Duration(milliseconds: 1200), () {
+    setState(() {
+      _deltaOpacity = 0.0;
+      _deltaLife = 0;  // Reset the ghost count after it fades away
+    });
+  });
+}
   // Helper method to format seconds as MM:SS.
   String _formatTime(int seconds) {
     final minutes = seconds ~/ 60;
@@ -70,26 +91,62 @@ class _PlayerCardState extends State<PlayerCard> {
     return "${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}";
   }
 
-  // New helper: _buildLifeButton
-  Widget _buildLifeButton({
-    required IconData icon,
-    required Color btnColor,
-    required VoidCallback onTap,
-    required VoidCallback onLongPress,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        decoration: BoxDecoration(
-          color: btnColor,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: Colors.white, size: 30),
+ // Add this new helper function to build the life buttons
+Widget _buildLifeButton({
+  required int change,
+  required bool isSubtract, // Whether it's left (subtract) or right (add)
+}) {
+  return GestureDetector(
+    onTap: () {
+      widget.onLifeChange(change);
+      _updateDeltaLife(change);
+    },
+    onLongPressStart: (_) {
+      // Start long press by setting the delta to 10.
+      _updateDeltaLife(isSubtract ? -10 : 10);
+      // Update the life total right away on long press start
+      widget.onLifeChange(isSubtract ? -10 : 10);
+      // Start the timer for continuous long press effect.
+      _startContinuousLongPress(isSubtract);
+    },
+    onLongPressEnd: (_) {
+      // Stop the long press timer.
+      _stopContinuousLongPress();
+    },
+    child: Container(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      decoration: BoxDecoration(
+        color: isSubtract ? Colors.red : Colors.green, // Red for subtract, Green for add
+        borderRadius: BorderRadius.circular(8),
       ),
-    );
-  }
+      child: Icon(
+        isSubtract ? Icons.remove : Icons.add,
+        color: Colors.white,
+        size: 30,
+      ),
+    ),
+  );
+}
+
+// Timer for continuous life change
+Timer? _longPressTimer;
+
+void _startContinuousLongPress(bool isSubtract) {
+  // Start a repeating timer that adds/subtracts life every 200ms
+  _longPressTimer = Timer.periodic(const Duration(milliseconds: 200), (timer) {
+    widget.onLifeChange(isSubtract ? -10 : 10);  // Update the life total continuously
+    _updateDeltaLife(isSubtract ? -10 : 10);  // Update the ghost count
+  });
+}
+
+void _stopContinuousLongPress() {
+  // Stop the repeating timer when the long press ends
+  _longPressTimer?.cancel();
+  _longPressTimer = null;
+}
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -135,8 +192,8 @@ class _PlayerCardState extends State<PlayerCard> {
     );
   }
 
-  /// Builds the front side of the card.
-  Widget _buildFront() {
+  //builds the front of the card
+ Widget _buildFront() {
   return Stack(
     fit: StackFit.expand,
     children: [
@@ -187,39 +244,53 @@ class _PlayerCardState extends State<PlayerCard> {
 
             const Spacer(),
 
-            // Life total row.
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            // Life total row with buttons.
+            Stack(
+              alignment: Alignment.center,
               children: [
-                _buildLifeButton(
-                  icon: Icons.remove,
-                  btnColor: const Color(0xFF333333),
-                  onTap: () => widget.onLifeChange(-1),
-                  onLongPress: () => widget.onLifeChange(-10),
-                ),
-                const SizedBox(width: 16),
+                // Life total text
                 Text(
-                  "${widget.lifeTotal}",
+                  '${widget.lifeTotal}',
                   style: const TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(width: 16),
-                _buildLifeButton(
-                  icon: Icons.add,
-                  btnColor: const Color(0xFF333333),
-                  onTap: () => widget.onLifeChange(1),
-                  onLongPress: () => widget.onLifeChange(10),
+                // Row for the + and - buttons horizontally (keep them centered)
+                Row(
+                  children: [
+                    // Left side to subtract life, positioned towards the left side
+                    Expanded(
+                      flex: 1,  // Controls the proportion of space for the left side
+                      child: Align(
+                        alignment: Alignment.centerRight,  // Position the button towards the right of its space
+                        child: _buildLifeButton(change: -1, isSubtract: true),
+                      ),
+                    ),
+
+                    // Middle space (you can adjust this space as needed)
+                    Expanded(
+                      flex: 1,
+                      child: Container(),  // Empty space to push buttons towards the left and right
+                    ),
+
+                    // Right side to add life, positioned towards the right side
+                    Expanded(
+                      flex: 1,  // Controls the proportion of space for the right side
+                      child: Align(
+                        alignment: Alignment.centerLeft,  // Position the button towards the left of its space
+                        child: _buildLifeButton(change: 1, isSubtract: false),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
 
             const Spacer(),
 
-            
-
+            // Button to Rejoin
             if (widget.lifeTotal <= 0)
               ElevatedButton(
                 onPressed: widget.onRejoin,
@@ -228,9 +299,30 @@ class _PlayerCardState extends State<PlayerCard> {
           ],
         ),
       ),
+
+      // Ghost delta life number, positioned at the bottom of the card
+      if (_deltaLife != 0)
+        Positioned(
+          bottom: 16,  // Positioned towards the bottom of the card
+          left: 0,
+          right: 0,  // Ensure it spans the full width of the card
+          child: AnimatedOpacity(
+            opacity: _deltaOpacity,
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              _deltaLife > 0 ? '+$_deltaLife' : '$_deltaLife',
+              textAlign: TextAlign.center, // Center the text
+              style: TextStyle(
+                fontSize: 28,
+                color: _deltaLife > 0 ? Colors.greenAccent : Colors.redAccent,
+              ),
+            ),
+          ),
+        ),
     ],
   );
 }
+
 
 
   /// Builds the back side of the card.
@@ -466,7 +558,7 @@ void _onCommanderDamagePressed() {
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: const Text("Adjust Opponent Commander Damage"),
-            content: Container(
+            content: SizedBox(
               width: 220, // Fixed width for a smaller dialog
               height: 220, // Fixed height for a smaller dialog
               child: GridView.count(
@@ -559,6 +651,4 @@ void _onCommanderDamagePressed() {
     },
   );
 }
-
-
 }

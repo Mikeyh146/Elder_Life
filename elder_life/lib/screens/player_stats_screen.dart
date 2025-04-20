@@ -6,7 +6,7 @@ import '../models/player.dart';
 import '../services/local_storage.dart';
 
 class PlayerStatsScreen extends StatefulWidget {
-  const PlayerStatsScreen({Key? key}) : super(key: key);
+  const PlayerStatsScreen({super.key});
 
   @override
   _PlayerStatsScreenState createState() => _PlayerStatsScreenState();

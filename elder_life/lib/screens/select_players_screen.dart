@@ -14,11 +14,11 @@ class SelectPlayersScreen extends StatefulWidget {
   final int startingLife;
 
   const SelectPlayersScreen({
-    Key? key,
+    super.key,
     required this.numberOfPlayers,
     required this.gameType,
     required this.startingLife,
-  }) : super(key: key);
+  });
 
   @override
   _SelectPlayersScreenState createState() => _SelectPlayersScreenState();

@@ -29,6 +29,9 @@ class Player {
   // NEW: Tracking wins with each commander. The key is the commander's name, value is the win count.
   Map<String, int> winCommanders;
 
+  // NEW: Tracking defeat state
+  bool isDefeated;
+
   Player({
     required this.id,
     required this.name,
@@ -47,6 +50,7 @@ class Player {
     List<Commander>? commanders,
     this.commanderDamage = 0,
     Map<String, int>? winCommanders,
+    this.isDefeated = false, // Initialize isDefeated to false
   })  : commanders = commanders ?? [],
         winCommanders = winCommanders ?? {};
 
@@ -68,6 +72,7 @@ class Player {
         'commanders': commanders.map((c) => c.toJson()).toList(),
         'commanderDamage': commanderDamage,
         'winCommanders': winCommanders,
+        'isDefeated': isDefeated, // Add isDefeated to the saved data
       };
 
   factory Player.fromJson(Map<String, dynamic> json) {
@@ -93,6 +98,7 @@ class Player {
           : [],
       commanderDamage: json['commanderDamage'] as int? ?? 0,
       winCommanders: (json['winCommanders'] as Map?)?.cast<String, int>() ?? {},
+      isDefeated: json['isDefeated'] as bool? ?? false, // Deserialize isDefeated
     );
   }
 }

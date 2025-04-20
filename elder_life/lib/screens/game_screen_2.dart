@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/player.dart';
-import '../models/commander.dart';
 import '../widgets/player_card.dart';
 
 class GameScreen2 extends StatefulWidget {
@@ -11,11 +10,11 @@ class GameScreen2 extends StatefulWidget {
   final bool isCommanderGame;
 
   const GameScreen2({
-    Key? key,
+    super.key,
     required this.players,
     required this.startingLife,
     required this.isCommanderGame,
-  }) : super(key: key);
+  });
 
   @override
   _GameScreen2State createState() => _GameScreen2State();
@@ -111,13 +110,14 @@ class _GameScreen2State extends State<GameScreen2> with SingleTickerProviderStat
           );
         },
       );
-      if (timeInput != null && timeInput.isNotEmpty) {
-        int? minutes = int.tryParse(timeInput);
-        if (minutes != null && minutes > 0) {
-          turnTimeInSeconds = minutes * 60;
-          playerTimers = { for (var p in activePlayers) p.id: turnTimeInSeconds };
-        }
-      }
+      if (timeInput?.isNotEmpty ?? false) {
+  int? minutes = int.tryParse(timeInput ?? ''); // Handle null by using an empty string fallback
+  if (minutes != null && minutes > 0) {
+    turnTimeInSeconds = minutes * 60;
+    playerTimers = { for (var p in activePlayers) p.id: turnTimeInSeconds };
+  }
+}
+
     }
 
     // 4. Determine first turn: randomly choose a player.
@@ -314,20 +314,31 @@ class _GameScreen2State extends State<GameScreen2> with SingleTickerProviderStat
         );
       },
     );
-    if (currentUser == null) return;
-    List<Player> opponents = activePlayers.where((p) => p.id != currentUser.id).toList();
-    if (opponents.isEmpty) return;
-    Player randomOpponent = opponents[math.Random().nextInt(opponents.length)];
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: const Text("Random Opponent"),
-        content: Text("Your opponent is: ${randomOpponent.name}"),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK")),
-        ],
+    if (currentUser == null || activePlayers.isEmpty) return;
+
+List<Player> opponents = activePlayers
+    .where((p) => p.id != currentUser!.id)
+    .toList();
+
+if (opponents.isEmpty) return;
+
+Player randomOpponent = opponents[math.Random().nextInt(opponents.length)];
+
+showDialog(
+  context: context,
+  builder: (_) => AlertDialog(
+    title: const Text("Random Opponent"),
+    content: Text("Your opponent is: ${randomOpponent.name}"),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text("OK"),
       ),
-    );
+    ],
+  ),
+);
+
+
   }
 
   // Helper: Show defeat dialog.

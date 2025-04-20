@@ -17,10 +17,10 @@ class PlayerDetailScreen extends StatefulWidget {
   final bool isCommanderGame;
 
   const PlayerDetailScreen({
-    Key? key,
+    super.key,
     required this.player,
     this.isCommanderGame = false,
-  }) : super(key: key);
+  });
 
   @override
   _PlayerDetailScreenState createState() => _PlayerDetailScreenState();
@@ -136,20 +136,20 @@ class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
       },
     );
 
-    if (selectedCommander != null &&
-        selectedCommander.name.isNotEmpty) {
-      setState(() {
-        currentPlayer!.commanders.add(
-          Commander(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            name: selectedCommander.name,
-            imageUrl: selectedCommander.imageUrl,
-          ),
-        );
-      });
-      print("Commander added: ${selectedCommander.name}");
-      await _updatePlayerInStorage();
-    }
+    if (selectedCommander?.name?.isNotEmpty ?? false) {
+  setState(() {
+    currentPlayer!.commanders.add(
+      Commander(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: selectedCommander?.name ?? 'Unknown', // Fallback to a default name
+        imageUrl: selectedCommander?.imageUrl ?? 'default_image_url', // Fallback to a default image URL
+      ),
+    );
+  });
+  print("Commander added: ${selectedCommander?.name ?? 'Unknown'}");
+  await _updatePlayerInStorage();
+}
+
   }
 
   Future<List<CommanderSearchResult>> _searchCommanders(String query) async {

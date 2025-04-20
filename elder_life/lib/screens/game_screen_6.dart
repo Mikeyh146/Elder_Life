@@ -7,11 +7,11 @@ class GameScreen6 extends StatelessWidget {
   final bool isCommanderGame;
 
   const GameScreen6({
-    Key? key,
+    super.key,
     required this.players,
     required this.startingLife,
     required this.isCommanderGame,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

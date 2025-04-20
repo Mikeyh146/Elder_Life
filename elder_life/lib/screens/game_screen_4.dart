@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/player.dart';
-import '../models/commander.dart';
 import '../widgets/player_card.dart';
 
 class GameScreen4 extends StatefulWidget {
@@ -11,11 +10,11 @@ class GameScreen4 extends StatefulWidget {
   final bool isCommanderGame;
 
   const GameScreen4({
-    Key? key,
+    super.key,
     required this.players,
     required this.startingLife,
     required this.isCommanderGame,
-  }) : super(key: key);
+  });
 
   @override
   _GameScreen4State createState() => _GameScreen4State();
@@ -102,7 +101,7 @@ class _GameScreen4State extends State<GameScreen4> with SingleTickerProviderStat
           builder: (context, setStateDialog) {
             return AlertDialog(
               title: const Text("Set Seating Arrangement"),
-              content: Container(
+              content: SizedBox(
                 width: 300,
                 height: 300,
                 child: GridView.count(
@@ -168,7 +167,7 @@ class _GameScreen4State extends State<GameScreen4> with SingleTickerProviderStat
       builder: (context) {
         return AlertDialog(
           title: Text("Select player for Seat ${seatIndex + 1}"),
-          content: Container(
+          content: SizedBox(
             width: double.maxFinite,
             child: ListView(
               shrinkWrap: true,
@@ -368,8 +367,8 @@ class _GameScreen4State extends State<GameScreen4> with SingleTickerProviderStat
         );
       },
     );
-    if (currentUser == null) return;
-    List<Player> opponents = activePlayers.where((p) => p.id != currentUser.id).toList();
+    List<Player> opponents = activePlayers.where((p) => p.id != currentUser?.id).toList();
+
     if (opponents.isEmpty) return;
     Player randomOpponent = opponents[math.Random().nextInt(opponents.length)];
     showDialog(

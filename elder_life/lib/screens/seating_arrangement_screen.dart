@@ -9,11 +9,11 @@ class SeatingArrangementScreen extends StatefulWidget {
   final bool isCommanderGame;
 
   const SeatingArrangementScreen({
-    Key? key,
+    super.key,
     required this.players,
     required this.startingLife,
     required this.isCommanderGame,
-  }) : super(key: key);
+  });
 
   @override
   _SeatingArrangementScreenState createState() => _SeatingArrangementScreenState();
@@ -29,11 +29,7 @@ class _SeatingArrangementScreenState extends State<SeatingArrangementScreen> {
     super.initState();
     // Pre-fill seats in order with null if not enough players.
     int count = widget.players.length;
-    seatAssignments = Map.fromIterable(
-      List.generate(6, (index) => index),
-      key: (item) => item as int,
-      value: (item) => item < count ? widget.players[item as int] : null,
-    );
+    seatAssignments = { for (var item in List.generate(6, (index) => index)) item : item < count ? widget.players[item] : null };
   }
 
   /// Opens a dialog to assign a player to the tapped seat.
@@ -72,12 +68,10 @@ class _SeatingArrangementScreenState extends State<SeatingArrangementScreen> {
         ],
       ),
     );
-    if (selected != null) {
-      setState(() {
-        seatAssignments[seatIndex] = selected;
-      });
+    setState(() {
+      seatAssignments[seatIndex] = selected;
+    });
     }
-  }
 
   /// Build a seat widget with a circular background.
   Widget _buildSeatWidget(int seatIndex) {

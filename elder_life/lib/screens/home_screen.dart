@@ -1,166 +1,204 @@
 import 'package:flutter/material.dart';
-import 'select_players_screen.dart';
+import 'new_game_start_screen.dart';
 import 'online_game_screen.dart';
+import 'player_or_pod_screen.dart';
 import 'player_stats_screen.dart';
-import 'manage_players_screen.dart';
-import 'player_profile_screen.dart';
 import 'settings_screen.dart';
-import 'package:elder_life/widgets/custom_circle_icon_text_button.dart';
-import 'package:elder_life/screens/new_game_start_screen.dart';
+import 'player_profile_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final Size screenSize = MediaQuery.of(context).size;
+    final bool isLandscape = screenSize.width > screenSize.height;
+
     return Scaffold(
-      body: Stack(
-        children: [
-          // Background image (if you want to keep it) or a color.
-          Container(
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/background.jpg"),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          // Dark overlay (increased opacity to 0.7).
-          Container(
-            color: Colors.black.withOpacity(0.7),
-          ),
-          // Left column: Offline Game, Online Game, Player Management, and Player Stats
-          Positioned(
-            top: 150,
-            left: 24,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFF0D0D0D),
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return Stack(
               children: [
-                CustomCircleIconTextButton(
-                  // Use stock icon for offline game.
-                  iconData: Icons.videogame_asset,
-                  label: 'Offline Game',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NewGameStartScreen(),
+                // Top row: Sign In and Settings
+                Positioned(
+                  top: 20,
+                  right: 20,
+                  child: Row(
+                    children: [
+                      _circleButton(
+                        icon: Icons.person,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PlayerProfileScreen(),
+                            ),
+                          );
+                        },
                       ),
-                    );
-                  },
+                      const SizedBox(width: 16),
+                      _circleButton(
+                        icon: Icons.settings,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                CustomCircleIconTextButton(
-                  // Use stock icon for online game.
-                  iconData: Icons.wifi,
-                  label: 'Online Game',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const OnlineGameScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomCircleIconTextButton(
-                  // Use stock icon for player management.
-                  iconData: Icons.people,
-                  label: 'Player Management',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ManagePlayersScreen(),
-                      ),
-                    );
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomCircleIconTextButton(
-                  // Use stock icon for player stats.
-                  iconData: Icons.insert_chart,
-                  label: 'Player Stats',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const PlayerStatsScreen(),
-                      ),
-                    );
-                  },
+
+                // Centered 2x2 button grid
+                Align(
+                  alignment: Alignment.center,
+                  child: SizedBox(
+                    width: isLandscape ? constraints.maxWidth * 0.9 : constraints.maxWidth * 0.95,
+                    height: isLandscape ? constraints.maxHeight * 0.7 : constraints.maxHeight * 0.5,
+                    child: GridView.count(
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 32,
+                      mainAxisSpacing: 32,
+                      padding: const EdgeInsets.all(16),
+                      childAspectRatio: 2, // Makes each button half the height of its width
+                      children: [
+                        _glowGridButton(
+                          icon: Icons.videogame_asset,
+                          label: 'New Game',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NewGameStartScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _glowGridButton(
+                          icon: Icons.wifi,
+                          label: 'Online Game',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const OnlineGameScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _glowGridButton(
+                          icon: Icons.people,
+                          label: 'Players/Pods',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PlayerOrPodScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                        _glowGridButton(
+                          icon: Icons.insert_chart,
+                          label: 'Game Statistics',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PlayerStatsScreen(),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _glowGridButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            const BoxShadow(
+              color: Colors.white10,
+              blurRadius: 10,
+              offset: Offset(-4, -4),
             ),
-          ),
-          // Top right: Player Profile button (no text)
-          Positioned(
-            top: 24,
-            right: 24,
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const PlayerProfileScreen(),
-                  ),
-                );
-              },
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 6,
-                      offset: const Offset(2, 2),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(Icons.person, size: 32, color: Colors.black),
-                ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.6),
+              blurRadius: 10,
+              offset: const Offset(6, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 32),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+                shadows: [
+                  Shadow(offset: Offset(0, 1), color: Colors.black54, blurRadius: 2),
+                ],
               ),
+              textAlign: TextAlign.center,
             ),
-          ),
-          // Bottom right: Settings button with a cog icon (no text)
-          Positioned(
-            bottom: 24,
-            right: 24,
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.4),
-                      blurRadius: 6,
-                      offset: const Offset(2, 2),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Icon(Icons.settings, color: Colors.black, size: 32),
-                ),
-              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _circleButton({required IconData icon, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: const Color(0xFF222222),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.white.withOpacity(0.1),
+              offset: const Offset(-2, -2),
+              blurRadius: 4,
             ),
-          ),
-        ],
+            BoxShadow(
+              color: Colors.black.withOpacity(0.6),
+              offset: const Offset(3, 3),
+              blurRadius: 6,
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 26, color: Colors.white),
       ),
     );
   }

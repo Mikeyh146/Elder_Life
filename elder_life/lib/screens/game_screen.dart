@@ -365,7 +365,7 @@ class _GameScreenState extends State<GameScreen> with SingleTickerProviderStateM
         );
       },
     );
-    List<Player> opponents = activePlayers.where((p) => p.id != currentPlayer!.id).toList();
+    List<Player> opponents = activePlayers.where((p) => p.id != currentPlayer.id).toList();
     Player randomOpponent = opponents[math.Random().nextInt(opponents.length)];
     _controller.forward(from: 0.0);
     showDialog(
